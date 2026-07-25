@@ -60,9 +60,9 @@ const Nav = () => {
   return (
     <>
       {/* --- Sleek Floating Navbar (Glassmorphism, No Border) --- */}
-      <nav className={`fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 w-[94%] sm:w-[95%] max-w-[1400px] z-[100] transition-all duration-700 rounded-2xl sm:rounded-3xl flex items-center justify-between px-3 sm:px-6 md:px-10 border border-transparent ${
+      <nav className={`fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 w-[94%] sm:w-[95%] max-w-[100vw] z-[100] transition-all duration-700 rounded-2xl sm:rounded-3xl flex items-center justify-between px-3 sm:px-6 md:px-10 border border-transparent ${
         scrolled
-          ? "h-12 sm:h-16 border-white/[0.06] bg-black/55 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+          ? "h-12 sm:h-16 border-cyan-400/[0.08] bg-black/55 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
           : "h-14 sm:h-20 md:h-24 bg-black/20 backdrop-blur-md border-white/[0.04]"
       }`}>
         <motion.div
@@ -154,7 +154,7 @@ const Nav = () => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={expoTransition}
-              className="relative flex h-full w-full flex-col justify-center border-l border-white/[0.06] bg-[#030303] px-10 md:w-1/2 md:px-24"
+              className="relative flex h-full w-full flex-col justify-center border-l border-white/[0.06] bg-[#030303] px-6 sm:px-10 md:w-1/2 md:px-24"
             >
               {/* Dynamic Glow */}
               <motion.div 
@@ -164,7 +164,7 @@ const Nav = () => {
                 className="absolute top-1/2 left-3/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-600/5 blur-[120px] rounded-full pointer-events-none" 
               />
 
-              <div className="flex flex-col gap-3 relative z-10">
+              <div className="flex flex-col gap-1.5 sm:gap-3 relative z-10">
                 {navLinks.map((item, i) => (
                   <motion.div
                     key={i}
@@ -180,7 +180,7 @@ const Nav = () => {
                     >
                       {/* Text Transitions: Refined sizing and slower stagger */}
                       <motion.div 
-                        className="flex font-syncopate font-bold text-3xl md:text-4xl lg:text-5xl tracking-[-0.02em] uppercase overflow-hidden"
+                        className="flex font-syncopate font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[-0.02em] uppercase overflow-hidden"
                         whileHover="hovered"
                         initial="initial"
                       >

@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
+import useIsTouch from "./useIsTouch";
 
 const defaultState = {
   rotateX: 0,
@@ -24,8 +25,14 @@ export function useParallaxTilt(maxTilt = 18) {
   const animFrameRef = useRef(null);
   const rectRef = useRef(null);
   const wasFlatRef = useRef(true);
+  const isTouch = useIsTouch();
 
   useEffect(() => {
+    // No pointer to tilt toward on touch devices — skip mousemove/scroll/
+    // resize tracking entirely instead of paying for idle listeners on
+    // every card.
+    if (isTouch) return;
+
     const el = ref.current;
     if (!el) return;
 
@@ -101,7 +108,7 @@ export function useParallaxTilt(maxTilt = 18) {
       ro.disconnect();
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [maxTilt]);
+  }, [maxTilt, isTouch]);
 
   // No-ops kept so existing onMouseEnter/onMouseMove/onMouseLeave wiring
   // (e.g. triggering a hover sound) doesn't need to change.

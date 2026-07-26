@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform, AnimatePresence, } from "framer-motion";
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -31,8 +31,9 @@ import Autoplay from "embla-carousel-autoplay";
 
 import Hyperspeed from "./components/Hyperspeed";
 import MerchPromoNotification from "./components/MerchPromoNotification";
-import { eventCards } from "./events/eventsData";
-import { workshopCards } from "./workshop/workshopData";
+import LoadingState from "./components/LoadingState";
+import { getCatalog } from "@/lib/catalogStore";
+import { getPromo, DEFAULT_PROMO } from "@/lib/promoStore";
 import { groupBySection } from "./lib/groupBySection";
 
 /** Memoized — Hyperspeed re-inits WebGL when this object identity changes (see reactbits.dev). */
@@ -88,17 +89,36 @@ const WORKSHOP_ICONS = {
   Biotech: <Dna size={20} />,
 };
 
-// Live from the actual data files — the home page always mirrors whatever
-// is currently the *first* (featured) section in workshopData.js / eventsData.js,
-// so editing those files is the only thing that ever needs to happen.
-const featuredWorkshopSection = groupBySection(workshopCards)[0];
-const featuredEventSection = groupBySection(eventCards)[0];
+const EMPTY_SECTION = { section: "", color: "#33d6ff", cards: [] };
 
 export default function Home() {
   const [selectedWorkshop, setSelectedWorkshop] = useState(null);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [hoveredEventIndex, setHoveredEventIndex] = useState(null);
+
+  // Live from the database — the home page always mirrors whatever is
+  // currently the *first* (featured) section for each kind.
+  const [featuredWorkshopSection, setFeaturedWorkshopSection] = useState(EMPTY_SECTION);
+  const [featuredEventSection, setFeaturedEventSection] = useState(EMPTY_SECTION);
+  const [promo, setPromo] = useState(DEFAULT_PROMO);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([getCatalog("workshop"), getCatalog("event"), getPromo("limited_drop")]).then(
+      ([workshops, events, promoData]) => {
+        if (!active) return;
+        setFeaturedWorkshopSection(groupBySection(workshops)[0] || EMPTY_SECTION);
+        setFeaturedEventSection(groupBySection(events)[0] || EMPTY_SECTION);
+        setPromo(promoData);
+        setCatalogLoading(false);
+      }
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const expoTransition = { duration: 0.2, ease: [0.85, 0, 0.15, 1] };
 
@@ -238,17 +258,20 @@ export default function Home() {
           className="max-w-4xl mx-auto"
         >
           <Link
-            href="/accommodation"
+            href={promo.link}
             className="glass-card group relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 overflow-hidden rounded-[2rem] border-cyan-500/25 p-5 sm:p-6 hover:border-cyan-400/50 transition-all duration-500"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            <div
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+              style={{ background: `linear-gradient(90deg, ${promo.accent_color}0d, transparent, ${promo.accent_color}1a)` }}
+            />
             <div className="relative flex gap-2 shrink-0">
               <motion.div
                 whileHover={{ rotate: -3, scale: 1.05 }}
                 className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-2xl overflow-hidden border border-white/10 shadow-lg"
               >
                 <Image
-                  src="/assets/wsfront.png"
+                  src={promo.image_front}
                   alt="Merch front"
                   fill
                   className="object-cover"
@@ -260,7 +283,7 @@ export default function Home() {
                 className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-2xl overflow-hidden border border-white/10 shadow-lg -ml-4 mt-4"
               >
                 <Image
-                  src="/assets/wsback.png"
+                  src={promo.image_back}
                   alt="Merch back"
                   fill
                   className="object-cover"
@@ -269,19 +292,26 @@ export default function Home() {
               </motion.div>
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-[9px] font-black uppercase tracking-[0.3em] text-cyan-400 mb-3">
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.3em] mb-3"
+                style={{
+                  background: `${promo.accent_color}26`,
+                  border: `1px solid ${promo.accent_color}4d`,
+                  color: promo.accent_color,
+                }}
+              >
                 <Package size={10} />
-                Limited drop
+                {promo.badge_label}
               </span>
               <h2 className="font-syncopate text-xl sm:text-2xl uppercase tracking-tight text-white group-hover:text-cyan-300 transition-colors">
-                Get official <span className="text-cyan-400">Space Merch</span>
+                {promo.heading}
               </h2>
               <p className="text-sm text-white/45 mt-2 max-w-md mx-auto sm:mx-0">
-                Hoodie-style kit for Conscientia 2026. Pick your size and delivery address on the registration page.
+                {promo.description}
               </p>
             </div>
             <div className="shrink-0 flex flex-col items-center gap-1 px-6 py-4 rounded-2xl bg-white text-black group-hover:bg-cyan-400 transition-colors duration-300">
-              <span className="font-syncopate text-2xl font-black">₹599</span>
+              <span className="font-syncopate text-2xl font-black">{promo.price}</span>
               <span className="font-syncopate text-[9px] uppercase tracking-[0.25em] flex items-center gap-1">
                 Register
                 <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
@@ -312,6 +342,8 @@ export default function Home() {
               </Link>
             </motion.div>
           </div>
+
+          {catalogLoading && <LoadingState label="Loading Events" accentColor="#a855f7" />}
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8">
             <motion.div
@@ -420,6 +452,8 @@ export default function Home() {
               </Link>
             </motion.div>
           </div>
+
+          {catalogLoading && <LoadingState label="Loading Workshops" accentColor="#33d6ff" />}
 
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
             <div className="flex flex-col gap-4">

@@ -31,7 +31,7 @@ import Autoplay from "embla-carousel-autoplay";
 
 import Hyperspeed from "./components/Hyperspeed";
 import MerchPromoNotification from "./components/MerchPromoNotification";
-import LoadingState from "./components/LoadingState";
+import FetchIntro from "./components/FetchIntro";
 import { getCatalog } from "@/lib/catalogStore";
 import { getPromo, DEFAULT_PROMO } from "@/lib/promoStore";
 import { groupBySection } from "./lib/groupBySection";
@@ -125,7 +125,10 @@ export default function Home() {
   const hyperspeedEffectOptions = useMemo(() => HYPERSPEED_OPTIONS, []);
 
   // --- SCROLL LOGIC ---
-
+  // Visual Archives gallery commented out for now — no real photos yet
+  // (IMAGES pointed at /imags/*.jpeg, which doesn't exist). Re-enable this
+  // block plus the matching JSX section below once real images land.
+  /*
   const IMAGES = [
     '/imags/1.jpeg',
     '/imags/2.jpeg',
@@ -188,11 +191,13 @@ export default function Home() {
   const scrollNext = useCallback(() => {
     if (emblaApi) emblaApi.scrollNext();
   }, [emblaApi]);
+  */
 
   const workshopCartel = featuredWorkshopSection.cards.slice(0, 4);
 
   return (
     <main className="bg-[#050505] min-h-screen text-white selection:bg-cyan-500/30 overflow-x-hidden relative">
+      <FetchIntro loading={catalogLoading} label="Loading" accentColor="#33d6ff" />
 
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute inset-0">
@@ -208,36 +213,53 @@ export default function Home() {
       <section className="relative z-10 flex h-screen flex-col items-center justify-center px-6">
         <div className="relative space-y-10 text-center">
           <motion.div
-            initial={{ opacity: 0, letterSpacing: "1.5em" }}
-            animate={{ opacity: 1, letterSpacing: "0.8em" }}
-            transition={{ duration: 1.5 }}
-            className="font-syncopate text-cyan-500 text-[10px] md:text-xs uppercase font-bold"
+            initial={{ opacity: 0, y: -8 }}
+            animate={catalogLoading ? undefined : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="font-syncopate text-cyan-500 text-[10px] md:text-xs uppercase font-bold tracking-[0.6em]"
           >
             Technical Fest
           </motion.div>
 
-          <div className="overflow-hidden">
-            <motion.h1
-              initial={{ y: "110%", rotateX: 50 }}
-              animate={{ y: 0, rotateX: 0 }}
-              transition={expoTransition}
-              className="text-[14vw] md:text-[10vw] font-syncopate font-bold leading-[0.75] bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40"
-            >
-              CONSCIENTIA
-            </motion.h1>
-          </div>
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
+            animate={catalogLoading ? undefined : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15 }}
+            className="relative flex flex-wrap justify-center px-3 sm:px-0 text-[14vw] md:text-[10vw] font-badcoma font-normal leading-[0.75]"
+          >
+            {"CONSCIENTIA".split("").map((ch, i) => (
+              <motion.span
+                key={i}
+                className="inline-block bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40"
+                animate={
+                  catalogLoading
+                    ? undefined
+                    : { y: ["0%", "-12%", "8%", "-5%", "0%"], rotate: [0, -3, 3, -1.5, 0] }
+                }
+                transition={{
+                  duration: 2.4,
+                  repeat: Infinity,
+                  repeatDelay: 1.4,
+                  ease: "easeInOut",
+                  delay: 0.9 + i * 0.06,
+                }}
+              >
+                {ch}
+              </motion.span>
+            ))}
+          </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.4 }}
-            transition={{ delay: 0.8 }}
-            className="text-center max-w-xl mx-auto text-md md:text-md tracking-[0.2em] uppercase leading-loose items-center gap-4 flex flex-col text-white/40"
+            initial={{ opacity: 0, y: 12 }}
+            animate={catalogLoading ? undefined : { opacity: 0.9, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-center max-w-xl mx-auto text-md md:text-md tracking-[0.2em] uppercase leading-loose items-center gap-4 flex flex-col text-white/80 font-bold"
           >
-            TIME FALL <br /> <span className="text-xs md:text-xs">Directed by Indian Institute of Space Science and Technology (IIST).</span>
+            TIME FALL <br /> <span className="text-xs md:text-xs font-bold text-white/70">Directed by Indian Institute of Space Science and Technology (IIST).</span>
             <Image src="/assets/iistlogo.png" alt="Logo" width={55} height={55} className="w-[40px] h-[40px] md:w-[60px] md:h-[60px] object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
           </motion.p>
 
-          <motion.div initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: 1.2, duration: 1 }} className="pt-12 flex flex-col items-center gap-6">
+          <motion.div initial={{ opacity: 0 }} animate={catalogLoading ? undefined : { opacity: 1 }} transition={{ delay: 0.6, duration: 0.5 }} className="pt-12 flex flex-col items-center gap-6">
             <button onClick={() => { location.href = "/events" }} className="group flex flex-col items-center gap-6 cursor-pointer bg-transparent border-none appearance-none">
               <div className="h-16 w-[1px] bg-cyan-500 group-hover:h-24 group-hover:bg-white transition-all duration-200 relative">
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full blur-[2px]" />
@@ -343,7 +365,6 @@ export default function Home() {
             </motion.div>
           </div>
 
-          {catalogLoading && <LoadingState label="Loading Events" accentColor="#a855f7" />}
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8">
             <motion.div
@@ -453,7 +474,6 @@ export default function Home() {
             </motion.div>
           </div>
 
-          {catalogLoading && <LoadingState label="Loading Workshops" accentColor="#33d6ff" />}
 
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
             <div className="flex flex-col gap-4">
@@ -646,7 +666,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* --- PHOTO GALLERY (VISUAL ARCHIVES) --- */}
+      {/* --- PHOTO GALLERY (VISUAL ARCHIVES) --- commented out for now, no real photos yet */}
+      {false && (
       <section className=" py-30 relative z-10 border-t border-white/5 bg-[#030303]/50 backdrop-blur-3xl overflow-hidden"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave} >
@@ -709,6 +730,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* --- INSTITUTION: THE NEXUS --- */}
       <section className="py-48 px-6 md:px-20 bg-[#070707] border-y border-white/5 relative z-10">

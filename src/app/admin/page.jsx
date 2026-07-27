@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown,
+  ChevronUp,
   Search,
   ShieldCheck,
   LogOut,
@@ -436,6 +437,39 @@ function AdminDashboard({ session, onLogout }) {
     }
   };
 
+  // Reorders one item within its own kind (workshop/event). sort_order is a
+  // plain `integer not null default 0` column, and most rows still sit at
+  // that default — a fractional-midpoint swap doesn't work here (ties at 0
+  // mean "the neighbor" and "the one beyond it" are often the same value,
+  // and a non-integer write is rejected by the column type anyway). Instead,
+  // splice the moved item into its new position and renumber the whole
+  // kind's list to clean multiples of 10 in that order — always correct
+  // regardless of whatever mess the existing values were in.
+  const moveCatalogOrder = async (item, dir) => {
+    const kindList = catalogItems.filter((c) => c.kind === item.kind && c.title);
+    const idx = kindList.findIndex((c) => c.id === item.id);
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || targetIdx < 0 || targetIdx >= kindList.length) return;
+
+    const reordered = kindList.slice();
+    const [moved] = reordered.splice(idx, 1);
+    reordered.splice(targetIdx, 0, moved);
+
+    const results = await Promise.all(
+      reordered.map((c, i) =>
+        fetch('/api/admin/catalog', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+          body: JSON.stringify({ id: c.id, kind: c.kind, fields: { sort_order: i * 10 } }),
+        }).then((res) => res.json().catch(() => ({})))
+      )
+    );
+    if (results.some((r) => !r.success)) {
+      pushToast?.('Failed to reorder — some items may not have saved.', 'error');
+    }
+    loadCatalog();
+  };
+
   useEffect(() => {
     if (tab === 'catalog' && !catalogLoaded) loadCatalog();
   }, [tab, catalogLoaded]);
@@ -810,20 +844,27 @@ function AdminDashboard({ session, onLogout }) {
                 !catalogError &&
                 catalogItems
                   .filter((item) => catalogKindFilter === 'all' || item.kind === catalogKindFilter)
-                  .map((item) => (
-                    <CatalogItemRow
-                      key={item.id}
-                      item={item}
-                      session={session}
-                      expanded={expandedCatalogId === item.id}
-                      onToggle={() =>
-                        setExpandedCatalogId((cur) => (cur === item.id ? null : item.id))
-                      }
-                      onCollapse={() => setExpandedCatalogId(null)}
-                      onSaved={loadCatalog}
-                      pushToast={pushToast}
-                    />
-                  ))}
+                  .map((item) => {
+                    const kindList = catalogItems.filter((c) => c.kind === item.kind && c.title);
+                    const posInKind = kindList.findIndex((c) => c.id === item.id);
+                    return (
+                      <CatalogItemRow
+                        key={item.id}
+                        item={item}
+                        session={session}
+                        expanded={expandedCatalogId === item.id}
+                        onToggle={() =>
+                          setExpandedCatalogId((cur) => (cur === item.id ? null : item.id))
+                        }
+                        onCollapse={() => setExpandedCatalogId(null)}
+                        onSaved={loadCatalog}
+                        pushToast={pushToast}
+                        onMove={item.title ? (dir) => moveCatalogOrder(item, dir) : null}
+                        canMoveUp={posInKind > 0}
+                        canMoveDown={posInKind !== -1 && posInKind < kindList.length - 1}
+                      />
+                    );
+                  })}
             </motion.div>
           )}
 
@@ -1502,7 +1543,7 @@ function SkipToggle({ skipped, onChange }) {
 
 const EMPTY_CONTACT = { name: '', role: '', phone: '' };
 
-function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved, pushToast }) {
+function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved, pushToast, onMove, canMoveUp, canMoveDown }) {
   const scalarFields = [...CATALOG_TEXT_FIELDS, ...CATALOG_TEXTAREA_FIELDS, ...CATALOG_COLOR_FIELDS];
   const allFields = [...scalarFields, ...CATALOG_LIST_FIELDS];
 
@@ -1662,7 +1703,35 @@ function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved
           </div>
         </div>
         <div className="flex items-center gap-2 text-white/40">
-          <Pencil size={13} />
+          {onMove && (
+            <span className="flex items-center gap-1.5">
+              <button
+                type="button"
+                title="Move up (show earlier)"
+                disabled={!canMoveUp}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMove('up');
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] text-white/70 transition-colors hover:border-cyan-400/60 hover:bg-cyan-500/15 hover:text-cyan-300 disabled:opacity-20 disabled:hover:border-white/15 disabled:hover:bg-white/[0.04] disabled:hover:text-white/70"
+              >
+                <ChevronUp size={20} />
+              </button>
+              <button
+                type="button"
+                title="Move down (show later)"
+                disabled={!canMoveDown}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMove('down');
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] text-white/70 transition-colors hover:border-cyan-400/60 hover:bg-cyan-500/15 hover:text-cyan-300 disabled:opacity-20 disabled:hover:border-white/15 disabled:hover:bg-white/[0.04] disabled:hover:text-white/70"
+              >
+                <ChevronDown size={20} />
+              </button>
+            </span>
+          )}
+          <Pencil size={13} className="ml-1" />
           <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </button>

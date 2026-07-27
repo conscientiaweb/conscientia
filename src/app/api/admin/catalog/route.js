@@ -102,6 +102,7 @@ const EDITABLE_FIELDS = [
   'contacts',
   'access',
   'sort_order',
+  'hidden_fields',
 ];
 
 /**

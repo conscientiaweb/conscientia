@@ -924,14 +924,16 @@ export default function WorkshopDetailPage() {
             <CinematicBox title="Workshop Details" accentColor={card.accentColor} glowColor={card.glowColor} delay={0.25}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
                 {[
-                  { label: "Duration", value: `${card.Duration} Days` },
-                  { label: "Total Seats", value: String(card.Seats) },
-                  { label: "Eligibility", value: card.eligibility || "Open to all" },
-                  { label: "Venue", value: card.venue || "TBA" },
-                  { label: "Timing", value: card.timing || "TBA" },
-                  { label: "Format", value: card.format },
-                  { label: "Certificate", value: card.certificate },
-                ].map((item) => (
+                  { label: "Duration", value: card.Duration != null ? `${card.Duration} Days` : null },
+                  { label: "Total Seats", value: card.Seats != null ? String(card.Seats) : null },
+                  { label: "Eligibility", value: card.eligibility || null },
+                  { label: "Venue", value: card.venue || null },
+                  { label: "Date & Time", value: card.timing || null },
+                  { label: "Format", value: card.format || null },
+                  { label: "Certificate", value: card.certificate || null },
+                ]
+                  .filter((item) => item.value)
+                  .map((item) => (
                   <div
                     key={item.label}
                     style={{

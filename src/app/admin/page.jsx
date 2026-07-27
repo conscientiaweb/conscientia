@@ -286,7 +286,7 @@ const CATALOG_TEXT_FIELDS = [
   { key: 'seats', label: 'Seats' },
   { key: 'eligibility', label: 'Eligibility' },
   { key: 'venue', label: 'Venue' },
-  { key: 'timing', label: 'Timing' },
+  { key: 'timing', label: 'Date & Time', hint: 'e.g. 12 Mar, 4:00 PM' },
   { key: 'image', label: 'Image URL', hint: 'https://…' },
   { key: 'badge_icon', label: 'Badge URL', hint: 'https://… (or an emoji)' },
   { key: 'accent_color', label: 'Accent Color', color: true },
@@ -1624,7 +1624,16 @@ function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved
     try {
       const fields = {};
       for (const f of scalarFields) {
-        if (skip[f.key]) continue; // admin chose to leave this field unchanged
+        if (skip[f.key]) {
+          // For every other field, "skip" means leave whatever's in the DB
+          // alone. Seats is the odd one out: it's a registration cap, and
+          // skipping it is how an admin says "no cap" — so it must actively
+          // write null (remaining() in useCapacity.js treats a non-number
+          // Seats as Infinity/unlimited), not just leave an old number in
+          // place still silently capping signups.
+          if (f.key === 'seats') fields.seats = null;
+          continue;
+        }
         if (form[f.key] === initialFormRef.current[f.key]) continue; // untouched — don't resend
         let value = form[f.key];
         if (f.key === 'duration' || f.key === 'seats') {
@@ -1650,6 +1659,14 @@ function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved
           fields.contacts = normalizedContacts;
         }
       }
+
+      // Always resend the current skip selection as hidden_fields — this is
+      // what actually makes a skipped field disappear from the public
+      // events/workshop detail page (see catalogStore.js), so it needs to
+      // stay in sync with `skip` on every save, not just when something
+      // else also changed.
+      fields.hidden_fields = allFields.filter((f) => skip[f.key]).map((f) => f.key);
+      if (skip.contacts) fields.hidden_fields.push('contacts');
 
       const res = await fetch(`/api/admin/catalog`, {
         method: 'PATCH',
@@ -1679,10 +1696,17 @@ function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved
 
   return (
     <div className="glass-card overflow-hidden rounded-xl transition-colors hover:border-cyan-500/20">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        className="flex w-full cursor-pointer items-center justify-between gap-3 p-4 text-left"
       >
         <div className="flex items-center gap-3">
           <span
@@ -1734,7 +1758,7 @@ function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved
           <Pencil size={13} className="ml-1" />
           <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
-      </button>
+      </div>
 
       <AnimatePresence initial={false}>
         {expanded && (

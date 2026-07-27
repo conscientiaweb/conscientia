@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Check } from "lucide-react";
+import { ShoppingCart, Check, CalendarClock } from "lucide-react";
 import { useParallaxTilt } from "../../hooks/useParallaxTilt";
 import useSound from "../../hooks/useSound";
 import { useAuth } from "../../context/AuthContext";
@@ -217,35 +217,6 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
         {/* Rainbow Holographic Sheen */}
         <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl" style={rainbowShineStyle} />
 
-        {/* Card Border */}
-        <div
-          className="absolute rounded-2xl"
-          style={{
-            top: "-2px",
-            left: "-2px",
-            right: "-2px",
-            bottom: "-2px",
-            borderRadius: "18px",
-            background: `linear-gradient(135deg, ${card.accentColor}88 0%, transparent 50%, ${card.accentColor}44 100%)`,
-            padding: "1.5px",
-          }}
-        >
-          <div className="h-full w-full rounded-2xl bg-transparent" />
-        </div>
-
-        {/* Inner border line */}
-        <div
-          className="absolute rounded-2xl"
-          style={{
-            top: "-0.5px",
-            left: "-0.5px",
-            right: "-0.5px",
-            bottom: "-0.5px",
-            borderRadius: "15px",
-            border: `1px solid ${card.accentColor}55`,
-          }}
-        />
-
         {/* Card Content - Landscape Layout */}
         <div className="relative z-10 flex flex-row p-2.5 sm:p-3">
           {/* Left Side - Image */}
@@ -385,6 +356,23 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
                 </span>
               ))}
             </div>
+
+            {/* Date & Time */}
+            {card.timing && (
+              <div style={layer1Style} className="mb-2 flex items-center gap-1.5">
+                <CalendarClock size={13} style={{ color: card.accentColor, flexShrink: 0 }} />
+                <span
+                  className="text-[11px] font-bold uppercase tracking-wide"
+                  style={{
+                    color: card.accentColor,
+                    fontFamily: 'var(--font-body), sans-serif',
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {card.timing}
+                </span>
+              </div>
+            )}
 
             {/* Price */}
             <div style={layer1Style} className="mb-2">

@@ -355,7 +355,7 @@ export default function EventDetailPage() {
   const id = params.id;
   const [card, setCard] = useState(null);
   const [cardLoading, setCardLoading] = useState(true);
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const ambientGlowRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -461,12 +461,30 @@ export default function EventDetailPage() {
   };
 
   useEffect(() => {
+    // Was React state (setMousePos) re-rendering this whole page — with
+    // every CinematicBox, its gradients, etc. underneath — on every single
+    // mousemove pixel, completely unthrottled. That's the main-thread cost
+    // that was stalling scroll. Now it mutates the one element that
+    // actually needs it directly, rAF-throttled, with no React re-render
+    // at all.
+    let frame = null;
     const handle = (e) => {
-      setMousePos({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight });
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        const el = ambientGlowRef.current;
+        if (!el) return;
+        const x = (e.clientX / window.innerWidth) * 100;
+        const y = (e.clientY / window.innerHeight) * 100;
+        el.style.background = `radial-gradient(ellipse at ${x}% ${y}%, ${card?.accentColor || "#a855f7"}12 0%, transparent 45%)`;
+      });
     };
     window.addEventListener("mousemove", handle, { passive: true });
-    return () => window.removeEventListener("mousemove", handle);
-  }, []);
+    return () => {
+      window.removeEventListener("mousemove", handle);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [card?.accentColor]);
 
   if (cardLoading) {
     return <FetchIntro loading label="Loading Event" accentColor="#a855f7" />;
@@ -486,7 +504,7 @@ export default function EventDetailPage() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", color: "#fff", overflowX: "hidden", maxWidth: "100vw" }}>
+    <div style={{ position: "relative", color: "#fff", overflowX: "hidden", maxWidth: "100vw" }} className="overflow-y-hidden">
       {/* Ambient background music — loops while on this page */}
 
 
@@ -500,12 +518,15 @@ export default function EventDetailPage() {
         }}
       />
 
-      {/* Ambient gradient */}
+      {/* Ambient gradient — background is mutated directly by the mousemove
+          handler above via ambientGlowRef, not React state, so moving the
+          mouse doesn't re-render this page. */}
       <div
+        ref={ambientGlowRef}
         style={{
           position: "fixed",
           inset: "-30%",
-          background: `radial-gradient(ellipse at ${mousePos.x * 100}% ${mousePos.y * 100}%, ${card.accentColor}12 0%, transparent 45%)`,
+          background: `radial-gradient(ellipse at 50% 50%, ${card.accentColor}12 0%, transparent 45%)`,
           transition: "background 0.6s ease",
           pointerEvents: "none",
           zIndex: -5,

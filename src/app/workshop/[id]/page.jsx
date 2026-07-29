@@ -612,6 +612,35 @@ export default function WorkshopDetailPage() {
                 }}>
                   {card.subtitle}
                 </p>
+                {card.prizePool && (
+                  <div
+                    className="prize-pool-banner"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.6rem",
+                      marginTop: "1.2rem",
+                      padding: "0.9rem 1.5rem",
+                      borderRadius: "14px",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.8rem" }}>🏆</span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display), sans-serif',
+                        fontSize: "clamp(1.1rem, 2.4vw, 1.6rem)",
+                        fontWeight: 900,
+                        letterSpacing: "0.04em",
+                        color: "#ffd54f",
+                        textShadow: "0 0 20px rgba(255,193,7,0.6)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Prize Pool: {card.prizePool}
+                    </span>
+                  </div>
+                )}
               </div>
               <div
                 style={{
@@ -784,6 +813,9 @@ export default function WorkshopDetailPage() {
                   }}
                 >
                   <InterferenceText>{card.price}</InterferenceText>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "rgba(255,255,255,0.4)", marginLeft: "0.4rem" }}>
+                    (registration fee)
+                  </span>
                 </div>
               </div>
               <a
@@ -928,7 +960,8 @@ export default function WorkshopDetailPage() {
                   { label: "Total Seats", value: card.Seats != null ? String(card.Seats) : null },
                   { label: "Eligibility", value: card.eligibility || null },
                   { label: "Venue", value: card.venue || null },
-                  { label: "Date & Time", value: card.timing || null },
+                  { label: "Date", value: card.eventDate || null },
+                  { label: "Time", value: card.timing || null },
                   { label: "Format", value: card.format || null },
                   { label: "Certificate", value: card.certificate || null },
                 ]

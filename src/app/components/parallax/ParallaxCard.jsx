@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Check, CalendarClock } from "lucide-react";
+import { ShoppingCart, Check, Calendar, Clock } from "lucide-react";
 import { useParallaxTilt } from "../../hooks/useParallaxTilt";
 import useSound from "../../hooks/useSound";
 import { useAuth } from "../../context/AuthContext";
@@ -333,6 +333,31 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               </div>
             </div>
 
+            {/* Prize pool — full-width pulsing banner so it reads at a
+                glance while scrolling, well above the price/tags row. */}
+            {card.prizePool && (
+              <div
+                style={{
+                  ...layer1Style,
+                  background: "rgba(255,193,7,0.08)",
+                  border: "1px solid rgba(255,193,7,0.4)",
+                }}
+                className="prize-pool-pulse mb-2 flex items-center justify-center gap-1.5 rounded-lg py-1.5 backdrop-blur-sm"
+              >
+                <span className="text-sm sm:text-base">🏆</span>
+                <span
+                  className="text-[11px] sm:text-sm font-black uppercase tracking-wide"
+                  style={{
+                    fontFamily: 'var(--font-display), sans-serif',
+                    color: "#ffd54f",
+                    textShadow: "0 0 12px rgba(255,193,7,0.7)",
+                  }}
+                >
+                  {card.prizePool}
+                </span>
+              </div>
+            )}
+
             {/* Description — skipped on mobile to keep cards compact */}
             <div style={layer1Style} className="mb-2 hidden sm:block">
               <p className="text-[11px] leading-relaxed text-white/60 italic" style={{ fontFamily: 'var(--font-body), sans-serif', letterSpacing: "0.04em", transform: "skewX(-0.5deg)" }}>{card.description}</p>
@@ -357,10 +382,26 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               ))}
             </div>
 
-            {/* Date & Time */}
+            {/* Date and Time — shown as two separate rows, not one combined
+                string, so each can be styled/skipped independently. */}
+            {card.eventDate && (
+              <div style={layer1Style} className="mb-1 flex items-center gap-1.5">
+                <Calendar size={13} style={{ color: card.accentColor, flexShrink: 0 }} />
+                <span
+                  className="text-[11px] font-bold uppercase tracking-wide"
+                  style={{
+                    color: card.accentColor,
+                    fontFamily: 'var(--font-body), sans-serif',
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {card.eventDate}
+                </span>
+              </div>
+            )}
             {card.timing && (
               <div style={layer1Style} className="mb-2 flex items-center gap-1.5">
-                <CalendarClock size={13} style={{ color: card.accentColor, flexShrink: 0 }} />
+                <Clock size={13} style={{ color: card.accentColor, flexShrink: 0 }} />
                 <span
                   className="text-[11px] font-bold uppercase tracking-wide"
                   style={{
@@ -384,7 +425,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
                   fontFamily: 'var(--font-display), sans-serif',
                 }}
               >
-                {card.price}
+                {card.price} <span className="text-[9px] sm:text-[11px] font-medium normal-case text-white/50">(registration fee)</span>
               </span>
             </div>
 
@@ -421,7 +462,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
                 }}
                 onClick={() => playClick()}
               >
-                View
+                View Details
               </Link>
               <div className="flex gap-2">
                 {isRegistered ? (
@@ -858,6 +899,13 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
       </div>
       </div>}
       <style>{`
+        .prize-pool-pulse {
+          animation: prizePoolPulse 2.2s ease-in-out infinite;
+        }
+        @keyframes prizePoolPulse {
+          0%, 100% { box-shadow: 0 0 10px rgba(255,193,7,0.15); }
+          50% { box-shadow: 0 0 18px rgba(255,193,7,0.35); }
+        }
         @keyframes fireStripLeft {
           0%, 100% { transform: scaleY(1) translateX(0); opacity: 0.8; }
           25% { transform: scaleY(1.03) translateX(-1px); opacity: 1; }

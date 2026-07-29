@@ -12,6 +12,8 @@ const COLUMN_TO_FIELD = {
   foil_gradient: 'foilGradient',
   about_extra: 'aboutExtra',
   brochure_url: 'brochureUrl',
+  prize_pool: 'prizePool',
+  event_date: 'eventDate',
 };
 
 const IGNORED_COLUMNS = new Set(['kind', 'sort_order', 'updated_at', 'updated_by', 'hidden_fields']);
@@ -23,7 +25,7 @@ const TEXT_COLUMNS_DEFAULT_EMPTY = new Set([
   'title', 'subtitle', 'type', 'section', 'section_color',
   'eligibility', 'venue', 'timing', 'image', 'badge_icon',
   'accent_color', 'glow_color', 'foil_gradient', 'description',
-  'format', 'certificate', 'brochure_url',
+  'format', 'certificate', 'brochure_url', 'prize_pool', 'event_date',
 ]);
 
 // Every workshop/event's real identity — price, ticket id, and the fact

@@ -98,6 +98,8 @@ const EDITABLE_FIELDS = [
   'certificate',
   'tags',
   'brochure_url',
+  'prize_pool',
+  'event_date',
   'layout',
   'contacts',
   'access',

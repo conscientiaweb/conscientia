@@ -100,6 +100,8 @@ const EDITABLE_FIELDS = [
   'brochure_url',
   'prize_pool',
   'event_date',
+  'group_size',
+  'strike_price',
   'layout',
   'contacts',
   'access',

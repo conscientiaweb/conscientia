@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import CursorTrialWrapper from "./components/CursorTrialWrapper";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import NetworkStatusToast from "./components/NetworkStatusToast";
+import CartToast from "./components/CartToast";
 import FetchTracker from "./components/FetchTracker";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
@@ -60,6 +61,7 @@ export default function RootLayout({ children }) {
               <CursorTrialWrapper />
               <ProfileCompletionModal />
               <NetworkStatusToast />
+              <CartToast />
               <FetchTracker />
               <Navbar />
               <div className="h-[10vh] shrink-0 bg-transparent" aria-hidden />

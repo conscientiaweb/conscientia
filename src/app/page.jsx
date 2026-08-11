@@ -255,8 +255,8 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-center max-w-xl mx-auto text-md md:text-md tracking-[1em] uppercase leading-loose items-center gap-4 flex flex-col text-white/80 font-bold"
           >
-            TIMEFALL <br /> <span className="tracking-[0.2em] text-xs md:text-xs font-bold text-white/70">Directed by Indian Institute of Space Science and Technology (IIST).</span>
-            <Image src="/assets/iistlogo.png" alt="Logo" width={55} height={55} className="w-[40px] h-[40px] md:w-[60px] md:h-[60px] object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
+            TIMEFALL <br /> <span className="tracking-[0.08em] text-xl md:text-2xl font-black text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]">Directed by Indian Institute of Space Science and Technology (IIST).</span>
+            <Image src="/assets/iistlogo.png" alt="Logo" width={90} height={90} className="w-[64px] h-[64px] md:w-[90px] md:h-[90px] object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
           </motion.p>
 
           <motion.div initial={{ opacity: 0 }} animate={catalogLoading ? undefined : { opacity: 1 }} transition={{ delay: 0.6, duration: 0.5 }} className="pt-12 flex flex-col items-center gap-6">

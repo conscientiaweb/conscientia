@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { CHECKOUT_STORAGE_KEYS } from '@/lib/checkout';
 
 const AuthContext = createContext({
   user: null,
@@ -81,6 +82,13 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    // Safety net: wipe any leftover single-use checkout data and the guest
+    // cart so a different person signing in on this browser never inherits
+    // another user's in-flight ticket/booking state.
+    if (typeof window !== 'undefined') {
+      CHECKOUT_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
+      window.localStorage.removeItem('conscientia_cart');
+    }
   }, []);
 
   return (

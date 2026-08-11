@@ -15,7 +15,6 @@ import {
   BedDouble,
   CalendarClock,
   CalendarCheck2,
-  CalendarX2,
   DoorOpen,
   Sparkles,
   Lock,
@@ -24,11 +23,13 @@ import {
   RefreshCw,
   Layers,
   Pencil,
+  QrCode,
 } from 'lucide-react';
 import { getCatalog } from '@/lib/catalogStore';
 import { getPromos, DEFAULT_PROMOS } from '@/lib/promoStore';
 import { groupBySection } from '../lib/groupBySection';
 import { FOOD_ADDONS, STAY_DATES } from '../accommodation/merchData';
+import QrScanner from '../components/QrScanner';
 
 const ADMIN_HEADER = 'x-admin-callsign';
 
@@ -255,6 +256,7 @@ export default function AdminPage() {
 
 const TABS = [
   { key: 'registrants', label: 'Registrants', icon: Users },
+  { key: 'checkin', label: 'Check In', icon: QrCode },
   { key: 'catalog', label: 'Catalog', icon: Layers },
   { key: 'tickets', label: 'Tickets', icon: Lock },
   { key: 'promo', label: 'Promo', icon: Sparkles },
@@ -358,18 +360,20 @@ function AdminDashboard({ session, onLogout }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [catalogReady, setCatalogReady] = useState(false);
 
+  // Refreshed on mount AND every time users reload (see loadUsers below) —
+  // otherwise a workshop/event added mid-session stays absent from
+  // WORKSHOP_IDS/EVENT_IDS, and a registrant who paid for it shows up with
+  // that item silently missing from their Workshops/Events buckets.
+  const loadCatalogSets = async () => {
+    const [workshops, events] = await Promise.all([getCatalog('workshop'), getCatalog('event')]);
+    CATALOG = [...workshops, ...events];
+    WORKSHOP_IDS = new Set(workshops.map((c) => String(c.id)));
+    EVENT_IDS = new Set(events.map((c) => String(c.id)));
+    setCatalogReady(true);
+  };
+
   useEffect(() => {
-    let active = true;
-    Promise.all([getCatalog('workshop'), getCatalog('event')]).then(([workshops, events]) => {
-      if (!active) return;
-      CATALOG = [...workshops, ...events];
-      WORKSHOP_IDS = new Set(workshops.map((c) => String(c.id)));
-      EVENT_IDS = new Set(events.map((c) => String(c.id)));
-      setCatalogReady(true);
-    });
-    return () => {
-      active = false;
-    };
+    loadCatalogSets();
   }, []);
 
   const [catalogItems, setCatalogItems] = useState([]);
@@ -532,9 +536,10 @@ function AdminDashboard({ session, onLogout }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/users', {
-        headers: { [ADMIN_HEADER]: session.callsign },
-      });
+      const [res] = await Promise.all([
+        fetch('/api/admin/users', { headers: { [ADMIN_HEADER]: session.callsign } }),
+        loadCatalogSets(),
+      ]);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.message || 'Failed to load users.');
@@ -746,6 +751,18 @@ function AdminDashboard({ session, onLogout }) {
         </div>
 
         <AnimatePresence mode="wait">
+          {tab === 'checkin' && (
+            <motion.div
+              key="checkin"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <CheckInPanel session={session} pushToast={pushToast} users={users} onRefresh={loadUsers} />
+            </motion.div>
+          )}
+
           {tab === 'tickets' && (
             <motion.div
               key="tickets"
@@ -1169,10 +1186,209 @@ function LogRow({ log }) {
   );
 }
 
+function CheckInPanel({ session, pushToast, users, onRefresh }) {
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult] = useState(null); // { loading } | { error } | { data, already }
+  const [manualCode, setManualCode] = useState('');
+
+  const handleScan = async (code) => {
+    setScanning(false);
+    setResult({ loading: true });
+    try {
+      const res = await fetch('/api/admin/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        body: JSON.stringify({ code }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        setResult({ error: json.message || 'No attendee found for that code.' });
+        return;
+      }
+      setResult({ data: json.data, already: !!json.already_checked_in });
+      pushToast?.(
+        json.already_checked_in
+          ? `${json.data.name || json.data.unique_code} was already checked in.`
+          : `Checked in ${json.data.name || json.data.unique_code}.`
+      );
+      if (!json.already_checked_in) onRefresh?.();
+    } catch (err) {
+      setResult({ error: err.message || 'Something went wrong.' });
+    }
+  };
+
+  const checkedIn = (users || [])
+    .filter((u) => u.checked_in_at)
+    .sort((a, b) => new Date(b.checked_in_at) - new Date(a.checked_in_at));
+
+  return (
+    <div>
+      <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-cyan-400/80">
+        Scan an attendee&apos;s QR to stamp their check-in time — rescanning an already checked-in
+        attendee won&apos;t overwrite it.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setResult(null);
+            setScanning(true);
+          }}
+          className="inline-flex items-center gap-2 rounded-full bg-cyan-400 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-black hover:bg-white transition-colors"
+        >
+          <QrCode size={14} /> Scan QR
+        </button>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const code = manualCode.trim();
+            if (!code) return;
+            setManualCode('');
+            handleScan(code);
+          }}
+          className="flex items-center gap-2"
+        >
+          <input
+            type="text"
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+            placeholder="Enter CNS-id manually"
+            className="w-48 rounded-full border border-white/15 bg-black/40 px-4 py-2.5 text-xs font-mono outline-none transition-colors focus:border-cyan-500/60"
+          />
+          <button
+            type="submit"
+            disabled={!manualCode.trim()}
+            className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300 transition-colors hover:border-cyan-400/70 hover:bg-cyan-500/20 disabled:opacity-40"
+          >
+            Check In
+          </button>
+        </form>
+      </div>
+
+      <AnimatePresence>
+        {scanning && <QrScanner onScan={handleScan} onClose={() => setScanning(false)} title="Scan Attendee QR" />}
+        {result && (
+          <CheckInResultModal
+            result={result}
+            onRescan={() => {
+              setResult(null);
+              setScanning(true);
+            }}
+            onClose={() => setResult(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="mt-8">
+        <p className="mb-3 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-cyan-400/80">
+          <CalendarCheck2 size={12} /> Checked In ({checkedIn.length})
+        </p>
+        {checkedIn.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-center text-xs text-white/30">
+            No one has checked in yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.03] text-[10px] uppercase tracking-[0.15em] text-white/40">
+                  <th className="px-4 py-2.5 font-semibold">Name</th>
+                  <th className="px-4 py-2.5 font-semibold">CNS-id</th>
+                  <th className="px-4 py-2.5 font-semibold">Phone</th>
+                  <th className="px-4 py-2.5 font-semibold">Check-in Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {checkedIn.map((u) => (
+                  <tr key={u.user_id} className="border-b border-white/5 last:border-b-0 hover:bg-white/[0.02]">
+                    <td className="px-4 py-2.5 font-semibold text-white/85">{u.name || 'Unnamed'}</td>
+                    <td className="px-4 py-2.5 font-mono text-cyan-300">{u.unique_code || '—'}</td>
+                    <td className="px-4 py-2.5 text-white/60">{u.phone || '—'}</td>
+                    <td className="px-4 py-2.5 text-white/60">{new Date(u.checked_in_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CheckInResultModal({ result, onRescan, onClose }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-6"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 12 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#050b0f] p-6"
+      >
+        {result.loading && <p className="text-center text-sm text-white/50">Looking up attendee…</p>}
+
+        {result.error && <p className="mb-4 text-center text-sm text-red-300">{result.error}</p>}
+
+        {result.data && (
+          <>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-lg font-bold text-white">{result.data.name || 'Unnamed'}</p>
+              <span
+                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] ${
+                  result.already ? 'bg-amber-400/15 text-amber-300' : 'bg-cyan-400/15 text-cyan-300'
+                }`}
+              >
+                {result.already ? 'Already Checked In' : 'Checked In Now'}
+              </span>
+            </div>
+            <div className="mb-4 grid grid-cols-1 gap-1.5 text-xs text-white/60 sm:grid-cols-2">
+              <p>CNS-id: <span className="text-cyan-300">{result.data.unique_code}</span></p>
+              <p>Phone: {result.data.phone || '—'}</p>
+              <p>College: {result.data.college || '—'}</p>
+              <p>College ID: {result.data.college_id || '—'}</p>
+              <p>Aadhaar: {result.data.aadhaar_number || '—'}</p>
+              <p>City: {result.data.city || '—'}</p>
+              <p>Gender: {result.data.gender || '—'}</p>
+              <p>Accommodation: {result.data.accommodation_room || '—'}</p>
+              <p className="sm:col-span-2">
+                Check-in time:{' '}
+                {result.data.checked_in_at ? new Date(result.data.checked_in_at).toLocaleString() : '—'}
+              </p>
+              <p className="sm:col-span-2">Workshops: {result.data.workshops?.join(', ') || '—'}</p>
+              <p className="sm:col-span-2">Events: {result.data.events?.join(', ') || '—'}</p>
+              <p className="sm:col-span-2">Merch: {result.data.merch_selection || '—'}</p>
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={onRescan}
+            className="flex-1 rounded-full bg-cyan-400 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-black hover:bg-white transition-colors"
+          >
+            Rescan
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-full border border-white/15 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtitle }) {
   const [form, setForm] = useState({
-    accommodation_checkin: user.accommodation_checkin || '',
-    accommodation_checkout: user.accommodation_checkout || '',
     accommodation_room: user.accommodation_room || '',
   });
   const status = accommodationStatus(user);
@@ -1193,14 +1409,8 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
     setSaving(true);
     setSaveMsg('');
     try {
-      // accommodation_checkin/checkout are timestamptz columns — an
-      // untouched field defaults to '' in form state, and Postgres rejects
-      // '' for a timestamp ("invalid input syntax for type timestamp with
-      // time zone"). Send null instead for anything left blank.
       const fields = {
         ...form,
-        accommodation_checkin: form.accommodation_checkin || null,
-        accommodation_checkout: form.accommodation_checkout || null,
         accommodation_room: form.accommodation_room || null,
       };
       const res = await fetch('/api/admin/profile', {
@@ -1220,10 +1430,6 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
     } finally {
       setSaving(false);
     }
-  };
-
-  const stampNow = (field) => {
-    setForm((f) => ({ ...f, [field]: new Date().toISOString() }));
   };
 
   return (
@@ -1367,55 +1573,17 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
                   )}
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-white/40">
-                    <CalendarClock size={11} /> Check-in
+                    <CalendarClock size={11} /> Check-in Time
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="datetime-local"
-                      value={form.accommodation_checkin ? form.accommodation_checkin.slice(0, 16) : ''}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          accommodation_checkin: e.target.value ? new Date(e.target.value).toISOString() : '',
-                        })
-                      }
-                      className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-xs outline-none transition-colors focus:border-cyan-500/60"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => stampNow('accommodation_checkin')}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-2.5 text-[10px] font-bold uppercase tracking-wide text-cyan-300 transition-colors hover:border-cyan-400/60 hover:bg-cyan-500/20"
-                    >
-                      <CalendarCheck2 size={12} /> Now
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-white/40">
-                    <CalendarClock size={11} /> Check-out
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="datetime-local"
-                      value={form.accommodation_checkout ? form.accommodation_checkout.slice(0, 16) : ''}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          accommodation_checkout: e.target.value ? new Date(e.target.value).toISOString() : '',
-                        })
-                      }
-                      className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-xs outline-none transition-colors focus:border-cyan-500/60"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => stampNow('accommodation_checkout')}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-[10px] font-bold uppercase tracking-wide text-amber-300 transition-colors hover:border-amber-400/60 hover:bg-amber-500/20"
-                    >
-                      <CalendarX2 size={12} /> Now
-                    </button>
-                  </div>
+                  <p className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs text-white/70">
+                    {user.checked_in_at ? (
+                      new Date(user.checked_in_at).toLocaleString()
+                    ) : (
+                      <span className="text-white/30">Not checked in yet — scan their QR in the Check In tab.</span>
+                    )}
+                  </p>
                 </div>
               </div>
 

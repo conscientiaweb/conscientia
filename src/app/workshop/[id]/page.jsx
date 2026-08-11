@@ -16,6 +16,8 @@ import { showCartToast } from "@/lib/cartToast";
 import { parsePriceLabel } from "@/lib/parsePriceLabel";
 import useCapacity from "@/app/hooks/useCapacity";
 import EvergreenCountdown from "@/app/components/EvergreenCountdown";
+import TeamReminderModal from "@/app/components/TeamReminderModal";
+import { supabase } from "@/lib/supabaseClient";
 
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -394,6 +396,33 @@ export default function WorkshopDetailPage() {
   }, [user?.id]);
 
   const isRegistered = card ? paidWorkshopIds.includes(card.id) : false;
+
+  const [teamIncomplete, setTeamIncomplete] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+
+  useEffect(() => {
+    if (!isRegistered || !card || Number(card.groupSize) <= 1 || !user?.id) {
+      setTeamIncomplete(false);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) return;
+      const res = await fetch(`/api/team?eventId=${encodeURIComponent(card.id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (active && json.success) {
+        setTeamIncomplete(!json.data?.team?.confirmed);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isRegistered, card, user?.id]);
+
   const { remaining } = useCapacity();
   const isClosed = !isRegistered && remaining(card) <= 0;
 
@@ -474,7 +503,7 @@ export default function WorkshopDetailPage() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", color: "#fff", overflowX: "hidden", maxWidth: "100vw" }}>
+    <div style={{ position: "relative", color: "#fff", overflowX: "hidden", maxWidth: "100vw" }} className="overflow-y-hidden">
       {/* Ambient background music — loops while on this page */}
 
 
@@ -838,8 +867,11 @@ export default function WorkshopDetailPage() {
                 Download Brochure
               </a>
               {isRegistered ? (
-                <div
+                <button
+                  type="button"
+                  onClick={() => teamIncomplete && setShowTeamModal(true)}
                   style={{
+                    width: "100%",
                     padding: "0.85rem",
                     borderRadius: "12px",
                     border: `1px solid ${card.accentColor}55`,
@@ -855,11 +887,14 @@ export default function WorkshopDetailPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "0.5rem",
+                    cursor: teamIncomplete ? "pointer" : "default",
                   }}
                 >
                   <Check size={16} />
-                  <InterferenceText>Registered</InterferenceText>
-                </div>
+                  <InterferenceText>
+                    {teamIncomplete ? "Registered — Add Teammates" : "Registered"}
+                  </InterferenceText>
+                </button>
               ) : isClosed ? (
                 <div
                   style={{
@@ -1099,6 +1134,7 @@ export default function WorkshopDetailPage() {
           }
         }
       `}</style>
+      <TeamReminderModal open={showTeamModal} onClose={() => setShowTeamModal(false)} />
     </div>
   );
 }

@@ -16,6 +16,8 @@ import useCapacity from "@/app/hooks/useCapacity";
 import { showCartToast } from "@/lib/cartToast";
 import { parsePriceLabel } from "@/lib/parsePriceLabel";
 import EvergreenCountdown from "@/app/components/EvergreenCountdown";
+import TeamReminderModal from "@/app/components/TeamReminderModal";
+import { supabase } from "@/lib/supabaseClient";
 
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -322,10 +324,10 @@ function CinematicBox({
               />
               <h2
                 style={{
-                  fontFamily: "'Rubik Glitch', sans-serif",
-                  fontSize: "1rem",
+                  fontFamily: "var(--font-anton), sans-serif",
+                  fontSize: "1.15rem",
                   fontWeight: 400,
-                  letterSpacing: "0.12em",
+                  letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   margin: 0,
                   textShadow: `0 0 30px ${glowColor}`,
@@ -396,6 +398,32 @@ export default function EventDetailPage() {
   const isRegistered = card ? paidWorkshopIds.includes(card.id) : false;
   const { remaining } = useCapacity();
   const isClosed = !isRegistered && remaining(card) <= 0;
+
+  const [teamIncomplete, setTeamIncomplete] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+
+  useEffect(() => {
+    if (!isRegistered || !card || Number(card.groupSize) <= 1 || !user?.id) {
+      setTeamIncomplete(false);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) return;
+      const res = await fetch(`/api/team?eventId=${encodeURIComponent(card.id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (active && json.success) {
+        setTeamIncomplete(!json.data?.team?.confirmed);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isRegistered, card, user?.id]);
 
   const playGlitch = useSound("/sounds/glitch.wav", 0.1, 0.15);
   const playClick = useSound("/sounds/click.wav", 0.125, 0.08);
@@ -593,16 +621,14 @@ export default function EventDetailPage() {
                 </span>
                 <h1
                   style={{
-                    fontFamily: 'Black Mustang, sans-serif',
-                    fontSize: "clamp(1.8rem, 4.5vw, 3.2rem)",
+                    fontFamily: 'var(--font-rubikmono), sans-serif',
+                    fontSize: "clamp(1.6rem, 4vw, 2.8rem)",
                     fontWeight: 400,
-                    letterSpacing: "0.25em",
+                    letterSpacing: "0.02em",
                     textTransform: "uppercase",
                     margin: 0,
                     textShadow: `0 0 40px ${card.glowColor}, 0 0 80px ${card.glowColor}44`,
-                    lineHeight: 1.2,
-                    fontStyle: "italic",
-                    transform: "skewX(-1deg)",
+                    lineHeight: 1.25,
                   }}
                 >
                   <InterferenceText>
@@ -611,13 +637,11 @@ export default function EventDetailPage() {
                 </h1>
                 <p style={{
                   marginTop: "0.8rem",
-                  fontSize: "0.9rem",
-                  fontFamily: "var(--font-body), sans-serif",
-                  color: "rgba(255,255,255,0.5)",
-                  letterSpacing: "0.04em",
+                  fontSize: "1rem",
+                  fontFamily: "var(--font-noto), sans-serif",
+                  color: "rgba(255,255,255,0.55)",
+                  letterSpacing: "0.02em",
                   lineHeight: 1.6,
-                  fontStyle: "italic",
-                  transform: "skewX(-0.5deg)",
                 }}>
                   {card.subtitle}
                 </p>
@@ -727,26 +751,22 @@ export default function EventDetailPage() {
             {/* About */}
             <CinematicBox title="About This Event" accentColor={card.accentColor} glowColor={card.glowColor} delay={0.2}>
               <p style={{
-                lineHeight: 1.9,
-                color: "rgba(255,255,255,0.6)",
-                fontSize: "0.9rem",
-                fontFamily: "var(--font-body), sans-serif",
-                letterSpacing: "0.04em",
-                fontStyle: "italic",
-                transform: "skewX(-0.3deg)",
+                lineHeight: 1.85,
+                color: "rgba(255,255,255,0.65)",
+                fontSize: "1rem",
+                fontFamily: "var(--font-noto), sans-serif",
+                letterSpacing: "0.01em",
               }}>
                 {card.description}
               </p>
               {(card.aboutExtra || []).map((para, i) => (
                 <p key={i} style={{
-                  lineHeight: 1.9,
-                  color: "rgba(255,255,255,0.6)",
-                  fontSize: "0.9rem",
-                  fontFamily: "var(--font-body), sans-serif",
-                  letterSpacing: "0.04em",
+                  lineHeight: 1.85,
+                  color: "rgba(255,255,255,0.65)",
+                  fontSize: "1rem",
+                  fontFamily: "var(--font-noto), sans-serif",
+                  letterSpacing: "0.01em",
                   marginTop: "1rem",
-                  fontStyle: "italic",
-                  transform: "skewX(-0.3deg)",
                 }}>
                   {para}
                 </p>
@@ -769,12 +789,10 @@ export default function EventDetailPage() {
                       }}
                     />
                     <span style={{
-                      color: "rgba(255,255,255,0.6)",
-                      fontSize: "0.9rem",
-                      fontFamily: "var(--font-body), sans-serif",
-                      letterSpacing: "0.04em",
-                      fontStyle: "italic",
-                      transform: "skewX(-0.3deg)",
+                      color: "rgba(255,255,255,0.68)",
+                      fontSize: "0.95rem",
+                      fontFamily: "var(--font-noto), sans-serif",
+                      letterSpacing: "0.01em",
                     }}>{item}</span>
                   </div>
                 ))}
@@ -796,12 +814,10 @@ export default function EventDetailPage() {
                       }}
                     />
                     <span style={{
-                      color: "rgba(255,255,255,0.6)",
-                      fontSize: "0.9rem",
-                      fontFamily: "var(--font-body), sans-serif",
-                      letterSpacing: "0.04em",
-                      fontStyle: "italic",
-                      transform: "skewX(-0.3deg)",
+                      color: "rgba(255,255,255,0.68)",
+                      fontSize: "0.95rem",
+                      fontFamily: "var(--font-noto), sans-serif",
+                      letterSpacing: "0.01em",
                     }}>{item}</span>
                   </div>
                 ))}
@@ -816,7 +832,7 @@ export default function EventDetailPage() {
               <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
                 <span style={{
                   fontSize: "0.65rem",
-                  fontFamily: 'var(--font-body), sans-serif',
+                  fontFamily: 'var(--font-noto), sans-serif',
                   color: "rgba(255,255,255,0.4)",
                   letterSpacing: "0.2em",
                   textTransform: "uppercase",
@@ -859,8 +875,11 @@ export default function EventDetailPage() {
                 Download Brochure
               </a>
               {isRegistered ? (
-                <div
+                <button
+                  type="button"
+                  onClick={() => teamIncomplete && setShowTeamModal(true)}
                   style={{
+                    width: "100%",
                     padding: "0.85rem",
                     borderRadius: "12px",
                     border: `1px solid ${card.accentColor}55`,
@@ -876,11 +895,14 @@ export default function EventDetailPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "0.5rem",
+                    cursor: teamIncomplete ? "pointer" : "default",
                   }}
                 >
                   <Check size={16} />
-                  <InterferenceText>Registered</InterferenceText>
-                </div>
+                  <InterferenceText>
+                    {teamIncomplete ? "Registered — Add Teammates" : "Registered"}
+                  </InterferenceText>
+                </button>
               ) : isClosed ? (
                 <div
                   style={{
@@ -960,7 +982,7 @@ export default function EventDetailPage() {
               <p style={{
                 textAlign: "center",
                 fontSize: "0.6rem",
-                fontFamily: "var(--font-body), sans-serif",
+                fontFamily: "var(--font-noto), sans-serif",
                 color: "rgba(255,255,255,0.3)",
                 marginTop: "0.8rem",
                 letterSpacing: "0.05em",
@@ -1001,14 +1023,14 @@ export default function EventDetailPage() {
                   >
                     <span style={{
                       fontSize: "0.7rem",
-                      fontFamily: 'var(--font-body), sans-serif',
+                      fontFamily: 'var(--font-noto), sans-serif',
                       color: "rgba(255,255,255,0.4)",
                       letterSpacing: "0.1em",
                       textTransform: "uppercase",
                     }}><InterferenceText>{item.label}</InterferenceText></span>
                     <span style={{
                       fontSize: "0.8rem",
-                      fontFamily: "var(--font-body), sans-serif",
+                      fontFamily: "var(--font-noto), sans-serif",
                       fontWeight: 600,
                       color: "rgba(255,255,255,0.8)",
                       letterSpacing: "0.03em",
@@ -1076,7 +1098,7 @@ export default function EventDetailPage() {
                     background: `${card.accentColor}12`,
                     color: `${card.accentColor}bb`,
                     border: `1px solid ${card.accentColor}28`,
-                    fontFamily: 'var(--font-body), sans-serif',
+                    fontFamily: 'var(--font-noto), sans-serif',
                     fontSize: "0.55rem",
                     fontWeight: 700,
                     letterSpacing: "0.08em",
@@ -1125,6 +1147,7 @@ export default function EventDetailPage() {
           }
         }
       `}</style>
+      <TeamReminderModal open={showTeamModal} onClose={() => setShowTeamModal(false)} />
     </div>
   );
 }

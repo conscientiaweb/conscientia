@@ -2,6 +2,16 @@
 // online-workshops page uses, so payment-success and the webhook can consume
 // bookings started from /cart the same way.
 
+// Single-use keys written by startTiqrCheckout below and consumed exactly
+// once by /payment-success — exported so both sides clear the same list and
+// never leave stale ticket data sitting in localStorage after use.
+export const CHECKOUT_STORAGE_KEYS = [
+  'registration_email',
+  'selected_workshops',
+  'registration_details',
+  'tiqr_booking_uid',
+];
+
 /**
  * TiQR puts the checkout link in different places for single vs bulk responses.
  * @param {object} data

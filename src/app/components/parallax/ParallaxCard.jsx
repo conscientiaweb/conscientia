@@ -253,7 +253,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               {/* Type badge on image */}
               <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2">
                 <span
-                  className="rounded-md px-1.5 py-0.5 text-[9px] sm:text-xs font-semibold uppercase tracking-wide text-white"
+                  className="rounded-md px-2 py-0.5 text-xs sm:text-sm font-semibold uppercase tracking-wide text-white"
                   style={{
                     background: "rgba(0,0,0,0.6)",
                     backdropFilter: "blur(8px)",
@@ -272,34 +272,19 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             <div style={layer1Style} className="mb-2">
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
-                  <div
-                    className="mb-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{
-                      background: `${card.accentColor}33`,
-                      color: card.accentColor,
-                      border: `1px solid ${card.accentColor}66`,
-                      textShadow: `0 0 10px ${card.accentColor}`,
-                      fontFamily: 'var(--font-display), sans-serif',
-                    }}
-                  >
-                    {card.type}
-                  </div>
                   <h3
-                    className="text-base font-black uppercase leading-tight tracking-tight text-white"
+                    className="text-2xl sm:text-3xl font-black uppercase leading-tight tracking-tight text-white"
                     style={{
                       textShadow: `0 0 20px ${card.accentColor}`,
-                      fontFamily: "'Rubik Glitch', sans-serif",
+                      fontFamily: "var(--font-anton), sans-serif",
                       fontWeight: 400,
-                      letterSpacing: "0.08em",
-                      fontStyle: "italic",
-                      transform: "skewX(-0.8deg)",
+                      letterSpacing: "0.01em",
                     }}
                   >
                     <span className="digital-interference scanline-sweep digital-flicker" style={{ position: "relative" }}>
                       <span className="glitch-text" data-text={card.title}>{card.title}</span>
                     </span>
                   </h3>
-                  <p className="mt-0.5 text-[10px] text-white/50 italic" style={{ fontFamily: 'var(--font-body), sans-serif', letterSpacing: "0.04em" }}>{card.subtitle}</p>
                 </div>
                 <div
                   className="ml-2 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-xl"
@@ -351,26 +336,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
 
             {/* Description — skipped on mobile to keep cards compact */}
             <div style={layer1Style} className="mb-2 hidden sm:block">
-              <p className="text-[11px] leading-relaxed text-white/60 italic" style={{ fontFamily: 'var(--font-body), sans-serif', letterSpacing: "0.04em", transform: "skewX(-0.5deg)" }}>{card.description}</p>
-            </div>
-
-            {/* Tags */}
-            <div style={layer1Style} className="mb-2 flex flex-wrap gap-1">
-              {card.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full px-1.5 py-0.5 text-[9px] font-medium italic"
-                  style={{
-                    background: `${card.accentColor}18`,
-                    color: `${card.accentColor}cc`,
-                    border: `1px solid ${card.accentColor}33`,
-                    fontFamily: 'var(--font-body), sans-serif',
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {tag}
-                </span>
-              ))}
+              <p className="text-sm leading-relaxed text-white/65" style={{ fontFamily: 'var(--font-noto), sans-serif', letterSpacing: "0.01em" }}>{card.description}</p>
             </div>
 
             {/* Date and Time — shown as two separate rows, not one combined
@@ -379,11 +345,11 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               <div style={layer1Style} className="mb-1 flex items-center gap-1.5">
                 <Calendar size={13} style={{ color: card.accentColor, flexShrink: 0 }} />
                 <span
-                  className="text-[11px] font-bold uppercase tracking-wide"
+                  className="text-sm font-bold uppercase tracking-wide"
                   style={{
                     color: card.accentColor,
-                    fontFamily: 'var(--font-body), sans-serif',
-                    letterSpacing: "0.03em",
+                    fontFamily: 'var(--font-bebas), sans-serif',
+                    letterSpacing: "0.02em",
                   }}
                 >
                   {card.eventDate}
@@ -409,7 +375,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             {/* Price */}
             <div style={layer1Style} className="mb-2">
               <span
-                className="text-base sm:text-lg font-black"
+                className="text-lg sm:text-xl font-black"
                 style={{
                   color: card.accentColor,
                   textShadow: `0 0 15px ${card.glowColor}`,
@@ -419,7 +385,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
                 {card.strikePrice && (
                   <span className="mr-1.5 text-white/35 line-through font-medium">{card.strikePrice}</span>
                 )}
-                {card.price} <span className="text-[9px] sm:text-[11px] font-medium normal-case text-white/50">(registration fee)</span>
+                {card.price} <span className="text-[11px] sm:text-xs font-medium normal-case text-white/50">(registration fee)</span>
               </span>
               <EvergreenCountdown className="mt-1 block text-[9px] sm:text-[10px] font-bold text-amber-300/90" />
             </div>
@@ -581,7 +547,9 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
           top: "-5%",
           bottom: "-5%",
           width: "200px",
-          zIndex: 5,
+          zIndex: -1,
+          willChange: "opacity",
+          transform: "translateZ(0)",
         }}
       >
         {/* Deep background glow */}
@@ -592,7 +560,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             top: "-25%",
             bottom: "-25%",
             width: "180px",
-            background: `radial-gradient(ellipse at 90% 50%, ${card.accentColor}${isHovered ? "70" : "30"}, transparent 65%)`,
+            background: `radial-gradient(ellipse at 90% 50%, ${card.accentColor}${isHovered ? "45" : "16"}, transparent 65%)`,
             filter: `blur(${isHovered ? "10px" : "22px"})`,
             transition: "all 0.6s cubic-bezier(0.23, 1, 0.32, 1)",
           }}
@@ -606,7 +574,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             bottom: "5%",
             width: "24px",
             background: `linear-gradient(to bottom, transparent 2%, ${card.accentColor}bb 20%, ${card.accentColor} 45%, ${card.accentColor}ff 50%, ${card.accentColor} 55%, ${card.accentColor}bb 80%, transparent 98%)`,
-            opacity: isHovered ? 1 : 0.55,
+            opacity: isHovered ? 0.6 : 0.25,
             filter: `blur(${isHovered ? "1px" : "2px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireStripLeft 1.8s ease-in-out infinite",
@@ -621,7 +589,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             bottom: "8%",
             width: "40px",
             background: `linear-gradient(to bottom, transparent, ${card.accentColor}99, ${card.accentColor}ee, ${card.accentColor}99, transparent)`,
-            opacity: isHovered ? 0.9 : 0.4,
+            opacity: isHovered ? 0.55 : 0.2,
             filter: `blur(${isHovered ? "4px" : "8px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireFlickerInner 1.2s ease-in-out infinite alternate",
@@ -636,7 +604,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             bottom: "3%",
             width: "60px",
             background: `linear-gradient(to bottom, transparent 5%, ${card.accentColor}66 30%, ${card.accentColor}88 50%, ${card.accentColor}66 70%, transparent 95%)`,
-            opacity: isHovered ? 0.7 : 0.25,
+            opacity: isHovered ? 0.4 : 0.12,
             filter: `blur(${isHovered ? "8px" : "14px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireFlickerInner 1.6s ease-in-out 0.2s infinite alternate",
@@ -650,14 +618,14 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             top: "-15%",
             bottom: "-15%",
             width: "140px",
-            background: `radial-gradient(ellipse at 70% 50%, ${card.accentColor}${isHovered ? "55" : "18"}, transparent 55%)`,
+            background: `radial-gradient(ellipse at 70% 50%, ${card.accentColor}${isHovered ? "35" : "10"}, transparent 55%)`,
             filter: `blur(${isHovered ? "12px" : "28px"})`,
             transition: "all 0.6s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "smokeDrift 3s ease-in-out infinite",
           }}
         />
         {/* Large flowing embers */}
-        {[...Array(10)].map((_, i) => (
+        {[...Array(5)].map((_, i) => (
           <div
             key={`left-big-${i}`}
             style={{
@@ -668,14 +636,14 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               borderRadius: "50%",
               background: `radial-gradient(circle, #fff 0%, ${card.accentColor} 40%, transparent 70%)`,
               boxShadow: `0 0 ${10 + i * 3}px ${card.accentColor}, 0 0 ${20 + i * 4}px ${card.accentColor}80, 0 0 ${30 + i * 5}px ${card.accentColor}40`,
-              opacity: isHovered ? 1 : 0.35,
+              opacity: isHovered ? 0.6 : 0.15,
               animation: `emberLeft${i % 4} ${2 + i * 0.2}s ease-out ${i * 0.12}s infinite`,
               transition: "opacity 0.5s ease",
             }}
           />
         ))}
         {/* Small spark particles */}
-        {[...Array(14)].map((_, i) => (
+        {[...Array(7)].map((_, i) => (
           <div
             key={`left-spark-${i}`}
             style={{
@@ -686,7 +654,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               borderRadius: "50%",
               background: "#fff",
               boxShadow: `0 0 6px ${card.accentColor}, 0 0 14px ${card.accentColor}`,
-              opacity: isHovered ? 0.9 : 0.2,
+              opacity: isHovered ? 0.5 : 0.08,
               animation: `sparkLeft${i % 3} ${1 + i * 0.12}s linear ${i * 0.08}s infinite`,
               transition: "opacity 0.4s ease",
             }}
@@ -702,7 +670,9 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
           top: "-5%",
           bottom: "-5%",
           width: "200px",
-          zIndex: 5,
+          zIndex: -1,
+          willChange: "opacity",
+          transform: "translateZ(0)",
         }}
       >
         {/* Deep background glow */}
@@ -713,7 +683,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             top: "-25%",
             bottom: "-25%",
             width: "180px",
-            background: `radial-gradient(ellipse at 10% 50%, ${card.accentColor}${isHovered ? "70" : "30"}, transparent 65%)`,
+            background: `radial-gradient(ellipse at 10% 50%, ${card.accentColor}${isHovered ? "45" : "16"}, transparent 65%)`,
             filter: `blur(${isHovered ? "10px" : "22px"})`,
             transition: "all 0.6s cubic-bezier(0.23, 1, 0.32, 1)",
           }}
@@ -727,7 +697,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             bottom: "5%",
             width: "24px",
             background: `linear-gradient(to bottom, transparent 2%, ${card.accentColor}bb 20%, ${card.accentColor} 45%, ${card.accentColor}ff 50%, ${card.accentColor} 55%, ${card.accentColor}bb 80%, transparent 98%)`,
-            opacity: isHovered ? 1 : 0.55,
+            opacity: isHovered ? 0.6 : 0.25,
             filter: `blur(${isHovered ? "1px" : "2px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireStripRight 1.8s ease-in-out 0.4s infinite",
@@ -742,7 +712,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             bottom: "8%",
             width: "40px",
             background: `linear-gradient(to bottom, transparent, ${card.accentColor}99, ${card.accentColor}ee, ${card.accentColor}99, transparent)`,
-            opacity: isHovered ? 0.9 : 0.4,
+            opacity: isHovered ? 0.55 : 0.2,
             filter: `blur(${isHovered ? "4px" : "8px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireFlickerInner 1.4s ease-in-out 0.3s infinite alternate",
@@ -757,7 +727,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             bottom: "3%",
             width: "60px",
             background: `linear-gradient(to bottom, transparent 5%, ${card.accentColor}66 30%, ${card.accentColor}88 50%, ${card.accentColor}66 70%, transparent 95%)`,
-            opacity: isHovered ? 0.7 : 0.25,
+            opacity: isHovered ? 0.4 : 0.12,
             filter: `blur(${isHovered ? "8px" : "14px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireFlickerInner 1.6s ease-in-out 0.2s infinite alternate",
@@ -771,14 +741,14 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             top: "-15%",
             bottom: "-15%",
             width: "140px",
-            background: `radial-gradient(ellipse at 30% 50%, ${card.accentColor}${isHovered ? "55" : "18"}, transparent 55%)`,
+            background: `radial-gradient(ellipse at 30% 50%, ${card.accentColor}${isHovered ? "35" : "10"}, transparent 55%)`,
             filter: `blur(${isHovered ? "12px" : "28px"})`,
             transition: "all 0.6s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "smokeDrift 3.2s ease-in-out 0.5s infinite",
           }}
         />
         {/* Large flowing embers */}
-        {[...Array(10)].map((_, i) => (
+        {[...Array(5)].map((_, i) => (
           <div
             key={`right-big-${i}`}
             style={{
@@ -789,14 +759,14 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               borderRadius: "50%",
               background: `radial-gradient(circle, #fff 0%, ${card.accentColor} 40%, transparent 70%)`,
               boxShadow: `0 0 ${10 + i * 3}px ${card.accentColor}, 0 0 ${20 + i * 4}px ${card.accentColor}80, 0 0 ${30 + i * 5}px ${card.accentColor}40`,
-              opacity: isHovered ? 1 : 0.35,
+              opacity: isHovered ? 0.6 : 0.15,
               animation: `emberRight${i % 4} ${2 + i * 0.2}s ease-out ${i * 0.12 + 0.1}s infinite`,
               transition: "opacity 0.5s ease",
             }}
           />
         ))}
         {/* Small spark particles */}
-        {[...Array(14)].map((_, i) => (
+        {[...Array(7)].map((_, i) => (
           <div
             key={`right-spark-${i}`}
             style={{
@@ -807,7 +777,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
               borderRadius: "50%",
               background: "#fff",
               boxShadow: `0 0 6px ${card.accentColor}, 0 0 14px ${card.accentColor}`,
-              opacity: isHovered ? 0.9 : 0.2,
+              opacity: isHovered ? 0.5 : 0.08,
               animation: `sparkRight${i % 3} ${1 + i * 0.12}s linear ${i * 0.08 + 0.05}s infinite`,
               transition: "opacity 0.4s ease",
             }}
@@ -823,7 +793,9 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
           left: "5%",
           right: "5%",
           height: "100px",
-          zIndex: 5,
+          zIndex: -1,
+          willChange: "opacity",
+          transform: "translateZ(0)",
         }}
       >
         <div
@@ -834,7 +806,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             right: 0,
             height: "16px",
             background: `linear-gradient(to right, transparent, ${card.accentColor}dd, transparent)`,
-            opacity: isHovered ? 0.9 : 0.4,
+            opacity: isHovered ? 0.55 : 0.2,
             filter: `blur(${isHovered ? "1px" : "3px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireStripTop 2s ease-in-out infinite",
@@ -847,7 +819,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             left: "-20%",
             right: "-20%",
             height: "70px",
-            background: `radial-gradient(ellipse at center bottom, ${card.accentColor}${isHovered ? "60" : "22"}, transparent 60%)`,
+            background: `radial-gradient(ellipse at center bottom, ${card.accentColor}${isHovered ? "40" : "12"}, transparent 60%)`,
             filter: `blur(${isHovered ? "6px" : "16px"})`,
             transition: "all 0.6s cubic-bezier(0.23, 1, 0.32, 1)",
           }}
@@ -862,7 +834,9 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
           left: "5%",
           right: "5%",
           height: "100px",
-          zIndex: 5,
+          zIndex: -1,
+          willChange: "opacity",
+          transform: "translateZ(0)",
         }}
       >
         <div
@@ -873,7 +847,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             right: 0,
             height: "16px",
             background: `linear-gradient(to right, transparent, ${card.accentColor}dd, transparent)`,
-            opacity: isHovered ? 0.9 : 0.4,
+            opacity: isHovered ? 0.55 : 0.2,
             filter: `blur(${isHovered ? "1px" : "3px"})`,
             transition: "all 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             animation: "fireStripBottom 2s ease-in-out 0.6s infinite",
@@ -886,7 +860,7 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
             left: "-20%",
             right: "-20%",
             height: "70px",
-            background: `radial-gradient(ellipse at center top, ${card.accentColor}${isHovered ? "60" : "22"}, transparent 60%)`,
+            background: `radial-gradient(ellipse at center top, ${card.accentColor}${isHovered ? "40" : "12"}, transparent 60%)`,
             filter: `blur(${isHovered ? "6px" : "16px"})`,
             transition: "all 0.6s cubic-bezier(0.23, 1, 0.32, 1)",
           }}
@@ -1005,4 +979,13 @@ const ParallaxCard = ({ card, index, basePath = "/workshop", width }) => {
     </div>
   );
 };
-export default ParallaxCard;
+
+// A listing page mounts dozens of these, each carrying a heavy tree of
+// blurred/animated aura layers. Without memoizing, an unrelated state
+// change anywhere above (e.g. typing in the search box on /events, which
+// re-renders the whole list on every keystroke) re-renders every card's
+// full DOM tree even though its own props never changed — that repaint,
+// multiplied across every visible card, is what read as laggy. `card` is
+// the same object reference across re-filters (only the array wrapping it
+// changes), so a shallow prop compare skips all of that reliably.
+export default React.memo(ParallaxCard);

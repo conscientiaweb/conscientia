@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import QRCode from 'qrcode';
+import { QrCode, ScanLine, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import useProfile from '../hooks/useProfile';
 import ProfileAvatar from '../components/ProfileAvatar';
 import FetchIntro from '../components/FetchIntro';
+import QrScanner from '../components/QrScanner';
 import { getCatalog } from '@/lib/catalogStore';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -65,6 +68,9 @@ export default function ProfilePage() {
   });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState(null); // { data } | { error }
 
   useEffect(() => {
     if (!user?.id) return;
@@ -172,6 +178,22 @@ export default function ProfilePage() {
     .map((raw) => findCatalogItem(String(raw).trim()))
     .filter(Boolean);
 
+  const handleScan = async (code) => {
+    setShowScanner(false);
+    setScanResult({ loading: true });
+    try {
+      const res = await authedFetch(`/api/scan?code=${encodeURIComponent(code)}`);
+      const json = await res.json();
+      if (!json.success) {
+        setScanResult({ error: json.message || 'No attendee found for that code.' });
+        return;
+      }
+      setScanResult({ data: json.data });
+    } catch (err) {
+      setScanResult({ error: err.message || 'Something went wrong looking that code up.' });
+    }
+  };
+
   return (
     <ProfileShell>
       <FetchIntro loading={fetching} label="Loading Profile" accentColor="#33d6ff" />
@@ -183,12 +205,31 @@ export default function ProfilePage() {
             <p className="truncate text-lg font-bold text-white">{profile?.name || 'Unnamed Attendee'}</p>
             <p className="truncate text-sm text-white/40">{user.email}</p>
             {profile?.unique_code && (
-              <span className="mt-2 inline-block rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 font-mono text-xs tracking-[0.15em] text-cyan-300">
-                {profile.unique_code}
-              </span>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQr(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 font-mono text-xs tracking-[0.15em] text-cyan-300 hover:border-cyan-400/70 hover:bg-cyan-500/20 transition-colors"
+                >
+                  <QrCode size={13} />
+                  {profile.unique_code}
+                </button>
+                <span className="text-[10px] uppercase tracking-[0.15em] text-white/30">
+                  Click to view QR
+                </span>
+              </div>
             )}
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setScanResult(null);
+                setShowScanner(true);
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-white/15 px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/70 hover:border-cyan-400/50 hover:text-cyan-300 transition-colors"
+            >
+              <ScanLine size={13} /> Scan
+            </button>
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
@@ -370,14 +411,22 @@ export default function ProfilePage() {
             linkLabel="Browse Workshops"
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {bookedItems.map((item) => (
-              <div key={item.id} className="space-y-2">
-                <TicketCard item={item} status="Confirmed" />
-                <TeamPanel item={item} profile={profile} />
-              </div>
-            ))}
-          </div>
+          <>
+            {registration?.payment_id && (
+              <p className="mb-4 text-xs text-white/40">
+                Payment ID:{' '}
+                <span className="font-mono text-cyan-300/90">{registration.payment_id}</span>
+              </p>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {bookedItems.map((item) => (
+                <div key={item.id} className="space-y-2">
+                  <TicketCard item={item} status="Confirmed" />
+                  <TeamPanel item={item} profile={profile} />
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </Section>
 
@@ -409,7 +458,138 @@ export default function ProfilePage() {
           </>
         )}
       </Section>
+
+      <AnimatePresence>
+        {showQr && profile?.unique_code && (
+          <QrCodeModal code={profile.unique_code} onClose={() => setShowQr(false)} />
+        )}
+        {showScanner && <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+        {scanResult && (
+          <ScanResultModal
+            result={scanResult}
+            onRescan={() => {
+              setScanResult(null);
+              setShowScanner(true);
+            }}
+            onClose={() => setScanResult(null)}
+          />
+        )}
+      </AnimatePresence>
     </ProfileShell>
+  );
+}
+
+function QrCodeModal({ code, onClose }) {
+  const [dataUrl, setDataUrl] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    QRCode.toDataURL(code, { margin: 1, width: 320, color: { dark: '#031014', light: '#e5faff' } }).then(
+      (url) => active && setDataUrl(url)
+    );
+    return () => {
+      active = false;
+    };
+  }, [code]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0, rotate: -6 }}
+        animate={{ scale: 1, opacity: 1, rotate: 0 }}
+        exit={{ scale: 0.6, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xs rounded-2xl border border-cyan-500/30 bg-[#050b0f] p-6 text-center"
+      >
+        <button
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-full border border-white/15 p-1.5 text-white/60 hover:border-red-400/50 hover:text-red-300 transition-colors"
+          aria-label="Close"
+        >
+          <X size={16} />
+        </button>
+        <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-400/90">Your CNS-id</p>
+        {dataUrl ? (
+          <motion.img
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            src={dataUrl}
+            alt={`QR code for ${code}`}
+            className="mx-auto w-full rounded-xl"
+          />
+        ) : (
+          <div className="mx-auto aspect-square w-full animate-pulse rounded-xl bg-white/5" />
+        )}
+        <p className="mt-4 font-mono text-sm tracking-[0.15em] text-cyan-300">{code}</p>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function ScanResultModal({ result, onRescan, onClose }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 12 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#050b0f] p-6"
+      >
+        {result.loading && <p className="text-center text-sm text-white/50">Looking up attendee…</p>}
+
+        {result.error && (
+          <>
+            <p className="mb-4 text-center text-sm text-red-300">{result.error}</p>
+            <div className="flex gap-2">
+              <button onClick={onRescan} className="flex-1 rounded-full bg-cyan-400 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-black hover:bg-white transition-colors">
+                Rescan
+              </button>
+              <button onClick={onClose} className="flex-1 rounded-full border border-white/15 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors">
+                Close
+              </button>
+            </div>
+          </>
+        )}
+
+        {result.data && (
+          <>
+            <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-400/90">Attendee</p>
+            <p className="mb-3 text-lg font-bold text-white">{result.data.name || 'Unnamed'}</p>
+            <div className="mb-4 space-y-1.5 text-xs text-white/60">
+              <p>CNS-id: <span className="text-cyan-300">{result.data.unique_code}</span></p>
+              <p>Phone: {result.data.phone || '—'}</p>
+              <p>College: {result.data.college || '—'}</p>
+              <p>City: {result.data.city || '—'}</p>
+              <p>Gender: {GENDER_LABELS[result.data.gender] || '—'}</p>
+              <p>Workshops: {result.data.workshops?.join(', ') || '—'}</p>
+              <p>Events: {result.data.events?.join(', ') || '—'}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onRescan} className="flex-1 rounded-full bg-cyan-400 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-black hover:bg-white transition-colors">
+                Rescan
+              </button>
+              <button onClick={onClose} className="flex-1 rounded-full border border-white/15 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors">
+                Close
+              </button>
+            </div>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
   );
 }
 

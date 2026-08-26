@@ -761,60 +761,6 @@ export default function WorkshopDetailPage() {
               ))}
             </CinematicBox>
 
-            {/* What You'll Learn */}
-            <CinematicBox title="What You Will Learn" accentColor={card.accentColor} glowColor={card.glowColor} delay={0.3}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                {(card.highlights || []).map((item, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-                    <div
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        background: card.accentColor,
-                        boxShadow: `0 0 8px ${card.accentColor}`,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{
-                      color: "rgba(255,255,255,0.6)",
-                      fontSize: "0.9rem",
-                      fontFamily: "var(--font-body), sans-serif",
-                      letterSpacing: "0.04em",
-                      fontStyle: "italic",
-                      transform: "skewX(-0.3deg)",
-                    }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </CinematicBox>
-
-            {/* Prerequisites */}
-            <CinematicBox title="Prerequisites" accentColor={card.accentColor} glowColor={card.glowColor} delay={0.4}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                {(card.requirements || []).map((item, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-                    <div
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        background: "rgba(255,255,255,0.2)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{
-                      color: "rgba(255,255,255,0.6)",
-                      fontSize: "0.9rem",
-                      fontFamily: "var(--font-body), sans-serif",
-                      letterSpacing: "0.04em",
-                      fontStyle: "italic",
-                      transform: "skewX(-0.3deg)",
-                    }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </CinematicBox>
           </div>
 
           {/* Right Column - Sidebar */}
@@ -1076,7 +1022,7 @@ export default function WorkshopDetailPage() {
 
             {/* Tags */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {card.tags.map((tag) => (
+              {(card.tags || []).map((tag) => (
                 <span
                   key={tag}
                   style={{

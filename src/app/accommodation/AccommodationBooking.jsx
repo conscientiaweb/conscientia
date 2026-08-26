@@ -16,10 +16,11 @@ function sameDates(a, b) {
   return as.length === bs.length && as.every((d, i) => d === bs[i]);
 }
 
-function DatePicker({ selected, onToggle, disabled }) {
+function DatePicker({ selected, onToggle, disabled, dates }) {
+  const options = dates || STAY_DATES;
   return (
     <div className="flex flex-wrap gap-2.5">
-      {STAY_DATES.map((d) => {
+      {options.map((d) => {
         const active = selected.includes(d.id);
         return (
           <motion.button
@@ -145,7 +146,11 @@ function FoodAddon({ addon, price }) {
         <p className="text-xs text-slate-400">{addon.description}</p>
         <p className="mt-1 text-xs font-semibold text-cyan-300">₹{price} / day</p>
       </div>
-      <DatePicker selected={selected} onToggle={toggleDate} />
+      <DatePicker
+        selected={selected}
+        onToggle={toggleDate}
+        dates={STAY_DATES.filter((d) => addon.dates.includes(d.id))}
+      />
       <ActionButton
         cartDates={cartDates}
         selectedDates={selected}
@@ -235,7 +240,7 @@ export default function AccommodationBooking() {
             <p className="text-sm font-semibold">Book a bed</p>
             <p className="text-xs text-slate-400">₹{accommodationPrice} per night — pick your dates below.</p>
             <p className="mt-1 text-[11px] text-slate-500">
-              A &quot;night&quot; runs from 4:00 PM the previous day to 4:00 PM the next day.
+              A &quot;night&quot; runs from 4:00 PM to 8:00 AM the next day.
             </p>
           </div>
         </div>

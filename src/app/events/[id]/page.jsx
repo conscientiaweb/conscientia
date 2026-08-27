@@ -772,57 +772,6 @@ export default function EventDetailPage() {
                 </p>
               ))}
             </CinematicBox>
-
-            {/* Highlights */}
-            <CinematicBox title="What You'll Experience" accentColor={card.accentColor} glowColor={card.glowColor} delay={0.3}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                {(card.highlights || []).map((item, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-                    <div
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        background: card.accentColor,
-                        boxShadow: `0 0 8px ${card.accentColor}`,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{
-                      color: "rgba(255,255,255,0.68)",
-                      fontSize: "0.95rem",
-                      fontFamily: "var(--font-noto), sans-serif",
-                      letterSpacing: "0.01em",
-                    }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </CinematicBox>
-
-            {/* Requirements */}
-            <CinematicBox title="Requirements" accentColor={card.accentColor} glowColor={card.glowColor} delay={0.4}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                {(card.requirements || []).map((item, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-                    <div
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        background: "rgba(255,255,255,0.2)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{
-                      color: "rgba(255,255,255,0.68)",
-                      fontSize: "0.95rem",
-                      fontFamily: "var(--font-noto), sans-serif",
-                      letterSpacing: "0.01em",
-                    }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </CinematicBox>
           </div>
 
           {/* Right Column - Sidebar */}

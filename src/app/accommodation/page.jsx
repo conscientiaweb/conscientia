@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     q: 'What are the check-in and check-out timings?',
-    a: 'Check-in: from October 29th (3pm onwards). Check-out: by 9pm on October 31st. Late arrivals must inform the hospitality team in advance.',
+    a: 'Check-in: from October 29th (3pm onwards). Check-out: by 9pm on November 1st. Late arrivals must inform the hospitality team in advance.',
   },
   {
     q: 'What does one "night" of accommodation mean?',
@@ -50,7 +50,7 @@ const faqs = [
   },
   {
     q: 'Can I extend my stay beyond fest dates?',
-    a: 'Accommodation is only available on 29th, 30th, and 31st October. Extensions are not permitted.',
+    a: 'Accommodation is only available from 29th October to 1st November. Extensions are not permitted.',
   },
   {
     q: 'Who should I contact in case of issues?',
@@ -81,7 +81,7 @@ const rulesSections = [
   {
     title: 'Accommodation Duration',
     points: [
-      'Accommodation will be available from October 29th to October 31st.',
+      'Accommodation will be available from October 29th to November 1st.',
       'Participants must strictly adhere to the allotted check-in and check-out timings.',
     ],
   },
@@ -120,7 +120,7 @@ const rulesSections = [
   {
     title: 'On-Campus Accommodation',
     points: [
-      'Participants staying on campus must return to their allotted accommodation by 10:00 PM.',
+      'Participants staying on campus must return to their allotted accommodation by 9:00 PM.',
       'Late entry will not be permitted unless prior approval has been obtained from the Hospitality Team under exceptional circumstances.',
     ],
   },
@@ -181,7 +181,7 @@ export default function AccommodationPage() {
         <dl className="mb-12 grid grid-cols-1 gap-4 border-y border-white/[0.08] py-5 sm:grid-cols-3">
           <div>
             <dt className="section-eyebrow mb-1">Dates</dt>
-            <dd className="text-sm">October 29, October 30, October 31</dd>
+            <dd className="text-sm">October 29, October 30, October 31, November 1</dd>
           </div>
           <div>
             <dt className="section-eyebrow mb-1">Eligibility</dt>

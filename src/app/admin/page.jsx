@@ -30,8 +30,25 @@ import { getPromos, DEFAULT_PROMOS } from '@/lib/promoStore';
 import { groupBySection } from '../lib/groupBySection';
 import { FOOD_ADDONS, STAY_DATES } from '../accommodation/merchData';
 import QrScanner from '../components/QrScanner';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 const ADMIN_HEADER = 'x-admin-callsign';
+
+// Kept fresh by AdminDashboard's auth-state subscription (module-level, same
+// pattern as CATALOG below) so every admin fetch can attach the current
+// Supabase access token without threading it through every call site. The
+// server re-checks this token's is_admin status on every request — the
+// callsign header alone is not enough (see src/lib/adminAuth.js).
+let ADMIN_TOKEN = null;
+
+function adminHeaders(session, extra = {}) {
+  return {
+    [ADMIN_HEADER]: session.callsign,
+    ...(ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {}),
+    ...extra,
+  };
+}
 
 // Populated once by AdminDashboard's catalog-fetch effect (module-level so
 // the module-scope helper functions below — findCatalogItem, paidBuckets —
@@ -141,6 +158,7 @@ function inCartSummary(cartItems) {
 }
 
 export default function AdminPage() {
+  const { user, loading: authLoading } = useAuth();
   const [session, setSession] = useState(null); // { name, role, callsign }
   const [codeword, setCodeword] = useState('');
   const [password, setPassword] = useState('');
@@ -157,9 +175,18 @@ export default function AdminPage() {
         setAuthError('Codeword/callsign and password are required.');
         return;
       }
+      const { data: authSessionData } = await supabase.auth.getSession();
+      const accessToken = authSessionData?.session?.access_token;
+      if (!accessToken) {
+        setAuthError('You must be signed in with an admin account to access this.');
+        return;
+      }
       const res = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ callsign: trimmed, password }),
       });
       const data = await res.json().catch(() => ({}));
@@ -203,49 +230,62 @@ export default function AdminPage() {
           >
             Admin Access
           </motion.h1>
-          <motion.form
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            onSubmit={handleLogin}
-            className="glass-card space-y-4 rounded-2xl border border-cyan-500/10 p-6 shadow-[0_0_40px_rgba(6,182,212,0.06)]"
-          >
-            <div>
-              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-white/40">
-                Codeword / Callsign
-              </label>
-              <input
-                type="text"
-                required
-                value={codeword}
-                onChange={(e) => setCodeword(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-2.5 text-sm outline-none transition-colors focus:border-cyan-500/60"
-                placeholder="yeah that one..,"
-              />
-            
-            </div>
-            <div>
-              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-white/40">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-2.5 text-sm outline-none transition-colors focus:border-cyan-500/60"
-                placeholder="••••••••"
-              />
-            </div>
-            {authError && (
-              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                {authError}
+          {authLoading ? (
+            <p className="text-sm text-white/50">Checking your session…</p>
+          ) : !user ? (
+            <div className="glass-card space-y-3 rounded-2xl border border-cyan-500/10 p-6 shadow-[0_0_40px_rgba(6,182,212,0.06)]">
+              <p className="text-sm text-white/70">
+                You need to be signed in with an admin account before the codeword/password will work.
               </p>
-            )}
-            <button type="submit" disabled={authBusy} className="btn-primary w-full">
-              {authBusy ? 'Verifying…' : 'Enter'}
-            </button>
-          </motion.form>
+              <a href="/login" className="btn-primary block w-full text-center">
+                Sign in
+              </a>
+            </div>
+          ) : (
+            <motion.form
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              onSubmit={handleLogin}
+              className="glass-card space-y-4 rounded-2xl border border-cyan-500/10 p-6 shadow-[0_0_40px_rgba(6,182,212,0.06)]"
+            >
+              <div>
+                <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-white/40">
+                  Codeword / Callsign
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={codeword}
+                  onChange={(e) => setCodeword(e.target.value)}
+                  className="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-2.5 text-sm outline-none transition-colors focus:border-cyan-500/60"
+                  placeholder="yeah that one..,"
+                />
+
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-white/40">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-2.5 text-sm outline-none transition-colors focus:border-cyan-500/60"
+                  placeholder="••••••••"
+                />
+              </div>
+              {authError && (
+                <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                  {authError}
+                </p>
+              )}
+              <button type="submit" disabled={authBusy} className="btn-primary w-full">
+                {authBusy ? 'Verifying…' : 'Enter'}
+              </button>
+            </motion.form>
+          )}
         </div>
       </div>
     );
@@ -376,6 +416,19 @@ function AdminDashboard({ session, onLogout }) {
     loadCatalogSets();
   }, []);
 
+  // Keeps ADMIN_TOKEN current for every admin fetch below — logging out of
+  // the underlying Supabase account (or the token expiring/refreshing)
+  // updates it immediately, since the server re-verifies it on every call.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      ADMIN_TOKEN = data?.session?.access_token || null;
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, authSession) => {
+      ADMIN_TOKEN = authSession?.access_token || null;
+    });
+    return () => sub?.subscription?.unsubscribe();
+  }, []);
+
   const [catalogItems, setCatalogItems] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState('');
@@ -405,7 +458,7 @@ function AdminDashboard({ session, onLogout }) {
     setTicketsLoading(true);
     setTicketsError('');
     try {
-      const res = await fetch('/api/admin/tickets', { headers: { [ADMIN_HEADER]: session.callsign } });
+      const res = await fetch('/api/admin/tickets', { headers: adminHeaders(session) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         setTicketsError(data.message || 'Failed to load tickets.');
@@ -434,7 +487,7 @@ function AdminDashboard({ session, onLogout }) {
     setCatalogError('');
     try {
       const res = await fetch('/api/admin/catalog', {
-        headers: { [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session),
         cache: 'no-store',
       });
       const data = await res.json().catch(() => ({}));
@@ -471,7 +524,7 @@ function AdminDashboard({ session, onLogout }) {
       reordered.map((c, i) =>
         fetch('/api/admin/catalog', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+          headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
           body: JSON.stringify({ id: c.id, kind: c.kind, fields: { sort_order: i * 10 } }),
         }).then((res) => res.json().catch(() => ({})))
       )
@@ -491,7 +544,7 @@ function AdminDashboard({ session, onLogout }) {
     setAdminsError('');
     try {
       const res = await fetch('/api/admin/list', {
-        headers: { [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -514,7 +567,7 @@ function AdminDashboard({ session, onLogout }) {
     setLogsError('');
     try {
       const res = await fetch('/api/admin/logs', {
-        headers: { [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -537,7 +590,7 @@ function AdminDashboard({ session, onLogout }) {
     setError('');
     try {
       const [res] = await Promise.all([
-        fetch('/api/admin/users', { headers: { [ADMIN_HEADER]: session.callsign } }),
+        fetch('/api/admin/users', { headers: adminHeaders(session) }),
         loadCatalogSets(),
       ]);
       const data = await res.json().catch(() => ({}));
@@ -574,7 +627,7 @@ function AdminDashboard({ session, onLogout }) {
     try {
       await fetch('/api/admin/logout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ callsign: session.callsign }),
       });
     } catch {
@@ -1197,7 +1250,7 @@ function CheckInPanel({ session, pushToast, users, onRefresh }) {
     try {
       const res = await fetch('/api/admin/checkin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ code }),
       });
       const json = await res.json().catch(() => ({}));
@@ -1415,7 +1468,7 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
       };
       const res = await fetch('/api/admin/profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ user_id: user.user_id, fields }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1879,7 +1932,7 @@ function CatalogItemRow({ item, session, expanded, onToggle, onCollapse, onSaved
 
       const res = await fetch(`/api/admin/catalog`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ id: item.id, kind: item.kind, fields }),
       });
       const data = await res.json().catch(() => ({}));
@@ -2264,7 +2317,7 @@ function ParticipantsPanel({ eventId, title, groupSize, ownerCode, session, push
     if (groupSize <= 1) return;
     let active = true;
     fetch(`/api/admin/team?eventId=${encodeURIComponent(eventId)}`, {
-      headers: { [ADMIN_HEADER]: session.callsign },
+      headers: adminHeaders(session),
     })
       .then((res) => res.json())
       .then((json) => {
@@ -2299,7 +2352,7 @@ function ParticipantsPanel({ eventId, title, groupSize, ownerCode, session, push
     try {
       const res = await fetch('/api/admin/reassign-registration', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ eventId, fromCode, toCode }),
       });
       const json = await res.json();
@@ -2385,7 +2438,7 @@ function TeamRegistrationsPanel({ eventId, groupSize, session }) {
 
   const load = () => {
     fetch(`/api/admin/team?eventId=${encodeURIComponent(eventId)}`, {
-      headers: { [ADMIN_HEADER]: session.callsign },
+      headers: adminHeaders(session),
     })
       .then((res) => res.json())
       .then((json) => {
@@ -2443,7 +2496,7 @@ function TeamRow({ team, groupSize, session, onSaved }) {
     try {
       const res = await fetch('/api/admin/team', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ id: team.id, memberCodes: codes }),
       });
       const json = await res.json();
@@ -2563,7 +2616,7 @@ function PromoEditor({ id, promo, session, pushToast, onSaved }) {
     try {
       const res = await fetch('/api/admin/promo', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: session.callsign },
+        headers: adminHeaders(session, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ id, fields: form }),
       });
       const data = await res.json().catch(() => ({}));

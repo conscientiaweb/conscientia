@@ -78,19 +78,25 @@ export async function GET(req) {
 
     const authById = new Map(authUsers.map((u) => [u.id, u]));
 
-    const users = (profiles || []).map((profile) => {
-      const registration =
-        registrationsByUser.get(profile.user_id) || registrationsByUser.get(profile.email) || null;
-      const authUser = authById.get(profile.user_id) || null;
-      return {
-        ...profile,
-        email: authUser?.email || null,
-        auth_created_at: authUser?.created_at || null,
-        last_sign_in_at: authUser?.last_sign_in_at || null,
-        registration,
-        cart_items: cartByUser.get(profile.user_id) || [],
-      };
-    });
+    const users = (profiles || [])
+      // A profile row is created the moment someone signs in, before
+      // ProfileCompletionModal runs — so a profile with no name never
+      // finished it, never got past the modal, and has no registration or
+      // payment. Not a real registrant; keep them out of the admin list.
+      .filter((profile) => !!(profile.name || '').trim())
+      .map((profile) => {
+        const registration =
+          registrationsByUser.get(profile.user_id) || registrationsByUser.get(profile.email) || null;
+        const authUser = authById.get(profile.user_id) || null;
+        return {
+          ...profile,
+          email: authUser?.email || null,
+          auth_created_at: authUser?.created_at || null,
+          last_sign_in_at: authUser?.last_sign_in_at || null,
+          registration,
+          cart_items: cartByUser.get(profile.user_id) || [],
+        };
+      });
 
     return NextResponse.json({ success: true, data: users });
   } catch (err) {

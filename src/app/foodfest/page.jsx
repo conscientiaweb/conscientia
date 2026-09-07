@@ -347,7 +347,7 @@ export default function FoodfestPage() {
           <img
             src="/creator.png"
             alt="Organizer stall poster"
-            className=" w-full max-w-md rounded-2xl border border-white/10 object-fill shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+            className=" w-2/3 max-w-md rounded-2xl border border-white/10 object-fill shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
               e.currentTarget.nextSibling.style.display = 'flex';

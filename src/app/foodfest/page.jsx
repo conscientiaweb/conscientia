@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
 import { startFoodfestCheckout } from '@/lib/foodfestCheckout';
+import FetchIntro from '../components/FetchIntro';
 
 const FLOATING_EMOJI = ['🍕', '🌮', '🍔', '🍟', '🍩', '🧋'];
 const ITEM_EMOJI = ['🍜', '🥘', '🍢', '🌯', '🧆', '🥟', '🍡', '🥪'];
@@ -314,7 +315,7 @@ export default function FoodfestPage() {
           </div>
         )}
 
-        {loading && <p className="text-white/40">Loading stalls…</p>}
+        <FetchIntro loading={loading} label="Loading Food Fest" accentColor="#ff6b35" />
         {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>}
 
         <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
@@ -347,7 +348,7 @@ export default function FoodfestPage() {
           <img
             src="/creator.png"
             alt="Organizer stall poster"
-            className=" w-2/3 max-w-md rounded-2xl border border-white/10 object-fill shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+            className=" w-2/3 rounded-2xl border border-white/10 object-fill shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
               e.currentTarget.nextSibling.style.display = 'flex';

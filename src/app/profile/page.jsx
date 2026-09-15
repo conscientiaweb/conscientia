@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
-import { QrCode, ScanLine, X } from 'lucide-react';
+import { QrCode, ScanLine, X, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import useProfile from '../hooks/useProfile';
@@ -405,10 +405,13 @@ export default function ProfilePage() {
           <p className="mb-3 text-xs uppercase tracking-[0.2em] text-white/40">Accommodation</p>
           {hasPaidAccommodation ? (
             <div className="text-sm text-emerald-400">
-              <p>✅ Booked — payment confirmed{profile?.accommodation_room ? `, room ${profile.accommodation_room}` : ''}.</p>
+              <p className="flex items-center gap-1.5">
+                <CheckCircle2 size={14} className="shrink-0" />
+                Booked — payment confirmed{profile?.accommodation_room ? `, room ${profile.accommodation_room}` : ''}.
+              </p>
               {accommodationItemsPaid.map((item) => (
                 <p key={item.booking_uid || item.booking_id} className="mt-1 text-xs text-white/50">
-                  {item.qty} night{item.qty > 1 ? 's' : ''} · ₹{item.amount}
+                  {item.qty} night{item.qty > 1 ? 's' : ''}
                   {item.dates?.length ? ` · ${item.dates.join(', ')}` : ' · nights not confirmed yet'}
                 </p>
               ))}
@@ -431,8 +434,9 @@ export default function ProfilePage() {
               {foodItemsPaid.map((item) => {
                 const label = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' }[item.internal_id] || item.internal_id;
                 return (
-                  <p key={item.booking_uid || item.booking_id}>
-                    ✅ {label} × {item.qty}
+                  <p key={item.booking_uid || item.booking_id} className="flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="shrink-0" />
+                    {label} × {item.qty}
                     {item.dates?.length ? ` — ${item.dates.join(', ')}` : ' — days not confirmed yet'}
                   </p>
                 );
@@ -455,8 +459,9 @@ export default function ProfilePage() {
               <p className="mt-3 text-xs uppercase tracking-[0.2em] text-white/40">Merch & Other Purchases</p>
               <div className="space-y-1 text-sm text-emerald-400">
                 {merchItemsPaid.map((item) => (
-                  <p key={item.booking_uid || item.booking_id}>
-                    ✅ {item.title || item.internal_id} × {item.qty} — ₹{item.amount}
+                  <p key={item.booking_uid || item.booking_id} className="flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="shrink-0" />
+                    {item.title || item.internal_id} × {item.qty}
                   </p>
                 ))}
               </div>
@@ -513,10 +518,12 @@ export default function ProfilePage() {
             )}
             <div className="grid gap-4 sm:grid-cols-2">
               {bookedItems.map((item) => (
-                <div key={item.id} className="space-y-2">
-                  <TicketCard item={item} status="Confirmed" />
-                  <TeamPanel item={item} profile={profile} />
-                </div>
+                <TicketCard
+                  key={item.id}
+                  item={item}
+                  status="Confirmed"
+                  footer={<TeamPanel item={item} profile={profile} />}
+                />
               ))}
             </div>
           </>
@@ -833,8 +840,9 @@ function TeamPanel({ item, profile }) {
   }, [item.id]);
 
   const neededCodes = Math.max(0, (status?.groupSize || 1) - 1);
+  const [checking, setChecking] = useState(false);
 
-  const handleAddTeammate = (e) => {
+  const handleAddTeammate = async (e) => {
     e.preventDefault();
     setError('');
     const trimmed = draft.trim().toUpperCase();
@@ -843,8 +851,19 @@ function TeamPanel({ item, profile }) {
       setError('That CNS-id is already on the team.');
       return;
     }
-    setCodes((prev) => [...prev, trimmed]);
-    setDraft('');
+    setChecking(true);
+    try {
+      const res = await authedFetch(`/api/team?checkCode=${encodeURIComponent(trimmed)}`);
+      const json = await res.json();
+      if (!json.success || !json.data?.exists) {
+        setError(`No account found for CNS-id ${trimmed}. Ask them to create a profile first.`);
+        return;
+      }
+      setCodes((prev) => [...prev, trimmed]);
+      setDraft('');
+    } finally {
+      setChecking(false);
+    }
   };
 
   const removeCode = (code) => {
@@ -885,7 +904,7 @@ function TeamPanel({ item, profile }) {
 
   if (groupSize <= 1) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/50">Participants</p>
         <span className="mt-1.5 inline-block rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 font-mono text-[10px] text-cyan-300">
           {yourCode} (you)
@@ -898,7 +917,7 @@ function TeamPanel({ item, profile }) {
     const filledCount = codes.length + 1; // + yourself
     const allAdded = codes.length === neededCodes;
     return (
-      <div className="space-y-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] p-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-amber-300">Complete your team</p>
           <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-300">
@@ -939,9 +958,10 @@ function TeamPanel({ item, profile }) {
             />
             <button
               type="submit"
-              className="shrink-0 rounded-full border border-cyan-500/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300 hover:bg-cyan-500/10"
+              disabled={checking}
+              className="shrink-0 rounded-full border border-cyan-500/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-60"
             >
-              Add
+              {checking ? 'Checking…' : 'Add'}
             </button>
           </form>
         )}
@@ -969,7 +989,7 @@ function TeamPanel({ item, profile }) {
 
   if (team?.confirmed) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/50">
           Team ({team.member_codes.length})
         </p>
@@ -996,40 +1016,43 @@ function TeamPanel({ item, profile }) {
   return null;
 }
 
-function TicketCard({ item, status, onRemove }) {
+function TicketCard({ item, status, onRemove, footer }) {
   const accent = item.accentColor || '#22d3ee';
   return (
     <div
-      className="relative overflow-hidden rounded-xl border p-4 flex gap-3"
+      className="relative overflow-hidden rounded-xl border p-4"
       style={{ borderColor: `${accent}40`, background: `${accent}0d` }}
     >
-      {item.image && (
-        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
-          <Image src={item.image} alt={item.title} fill className="object-cover" sizes="64px" />
+      <div className="flex gap-3">
+        {item.image && (
+          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+            <Image src={item.image} alt={item.title} fill className="object-cover" sizes="64px" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-white">
+            {item.title}
+            {item.qty > 1 && <span className="ml-1.5 text-cyan-300">x{item.qty}</span>}
+          </p>
+          <p className="truncate text-xs text-white/40">{item.subtitle}</p>
+          <span
+            className="mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+            style={{ background: `${accent}22`, color: accent }}
+          >
+            {status}
+          </span>
         </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-white">
-          {item.title}
-          {item.qty > 1 && <span className="ml-1.5 text-cyan-300">x{item.qty}</span>}
-        </p>
-        <p className="truncate text-xs text-white/40">{item.subtitle}</p>
-        <span
-          className="mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-          style={{ background: `${accent}22`, color: accent }}
-        >
-          {status}
-        </span>
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            className="self-start text-white/30 hover:text-red-400 text-xs"
+            aria-label="Remove from cart"
+          >
+            ✕
+          </button>
+        )}
       </div>
-      {onRemove && (
-        <button
-          onClick={onRemove}
-          className="self-start text-white/30 hover:text-red-400 text-xs"
-          aria-label="Remove from cart"
-        >
-          ✕
-        </button>
-      )}
+      {footer && <div className="mt-3 border-t border-white/10 pt-3">{footer}</div>}
     </div>
   );
 }

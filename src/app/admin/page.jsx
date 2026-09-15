@@ -90,10 +90,18 @@ function paidBuckets(user) {
 
 const STAY_DATE_LABELS = Object.fromEntries(STAY_DATES.map((d) => [d.id, d.label]));
 
+// Registrants list is dense enough that the full "2026-10-29" (or even
+// "Oct 29") clutters every row — everyone already knows the month, so just
+// the day-of-month number is enough to tell dates apart.
+function shortDay(dateId) {
+  const m = String(dateId).match(/-(\d{1,2})$/);
+  return m ? String(Number(m[1])) : dateId;
+}
+
 function dateSuffix(cartRow) {
   const dates = cartRow?.item_data?.details?.dates;
   if (!Array.isArray(dates) || dates.length === 0) return '';
-  const labels = dates.map((d) => STAY_DATE_LABELS[d] || d).join('/');
+  const labels = dates.map((d) => shortDay(d)).join('/');
   return ` (${labels})`;
 }
 
@@ -147,12 +155,19 @@ function hasFood(user) {
 // Earliest stay date across a user's paid food/accommodation items (ids are
 // ISO dates, e.g. "2026-10-29", so plain string sort is chronological). Items
 // still needing day selection have no dates yet and sort last.
-function earliestStayDate(user) {
+function stayDates(user) {
   const items = user.registration?.details?.items_paid;
-  if (!Array.isArray(items)) return null;
-  const dates = items
+  if (!Array.isArray(items)) return [];
+  return items
     .filter((i) => FOOD_ADDON_IDS.has(i.internal_id) || i.internal_id === 'accommodation')
     .flatMap((i) => (Array.isArray(i.dates) ? i.dates : []));
+}
+
+// Earliest stay date across a user's paid food/accommodation items (ids are
+// ISO dates, e.g. "2026-10-29", so plain string sort is chronological). Items
+// still needing day selection have no dates yet and sort last.
+function earliestStayDate(user) {
+  const dates = stayDates(user);
   if (dates.length === 0) return null;
   return dates.slice().sort()[0];
 }
@@ -411,12 +426,22 @@ function AdminDashboard({ session, onLogout }) {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [eventSearch, setEventSearch] = useState('');
-  const [allTeams, setAllTeams] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [tab, setTab] = useState('registrants'); // 'registrants' | 'logs' | 'admins'
   const [activeFilters, setActiveFilters] = useState([]); // ['event','workshop','food','accommodation']
   const [foodSort, setFoodSort] = useState(false);
-  const [dateSort, setDateSort] = useState(false);
+  // Cycles through 'default' -> each STAY_DATES id -> back to 'default'.
+  // A specific date pulls registrants staying/eating on that date to the
+  // top (still earliest-date-first among themselves), rather than the old
+  // plain boolean "sort by earliest date" toggle.
+  const [dateSort, setDateSort] = useState('default');
+  const cycleDateSort = () => {
+    setDateSort((cur) => {
+      if (cur === 'default') return STAY_DATES[0]?.id || 'default';
+      const idx = STAY_DATES.findIndex((d) => d.id === cur);
+      return idx === -1 || idx === STAY_DATES.length - 1 ? 'default' : STAY_DATES[idx + 1].id;
+    });
+  };
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
@@ -636,9 +661,8 @@ function AdminDashboard({ session, onLogout }) {
     setLoading(true);
     setError('');
     try {
-      const [res, teamsRes] = await Promise.all([
+      const [res] = await Promise.all([
         fetch('/api/admin/users', { headers: adminHeaders(session) }),
-        fetch('/api/admin/team', { headers: adminHeaders(session) }),
         loadCatalogSets(),
       ]);
       const data = await res.json().catch(() => ({}));
@@ -647,8 +671,6 @@ function AdminDashboard({ session, onLogout }) {
         return;
       }
       setUsers(data.data || []);
-      const teamsData = await teamsRes.json().catch(() => ({}));
-      if (teamsRes.ok && teamsData.success) setAllTeams(teamsData.data || []);
     } finally {
       setLoading(false);
     }
@@ -692,20 +714,6 @@ function AdminDashboard({ session, onLogout }) {
     setActiveFilters((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
   };
 
-  // Maps a registrant's unique_code to every team they're on, across all
-  // events — a solo (non-team) registrant simply has no entry here.
-  const teamsByCode = useMemo(() => {
-    const map = new Map();
-    for (const team of allTeams) {
-      const codes = [team.leader_unique_code, ...(team.member_codes || [])].filter(Boolean);
-      for (const code of codes) {
-        if (!map.has(code)) map.set(code, []);
-        map.get(code).push(team);
-      }
-    }
-    return map;
-  }, [allTeams]);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = users;
@@ -741,10 +749,13 @@ function AdminDashboard({ session, onLogout }) {
         })
         .map(({ u }) => u);
     }
-    if (dateSort) {
+    if (dateSort !== 'default') {
       list = list
         .map((u, i) => ({ u, i }))
         .sort((a, b) => {
+          const ah = stayDates(a.u).includes(dateSort) ? 0 : 1;
+          const bh = stayDates(b.u).includes(dateSort) ? 0 : 1;
+          if (ah !== bh) return ah - bh;
           const ad = earliestStayDate(a.u);
           const bd = earliestStayDate(b.u);
           if (ad && bd) return ad === bd ? a.i - b.i : ad < bd ? -1 : 1;
@@ -1188,16 +1199,18 @@ function AdminDashboard({ session, onLogout }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDateSort((v) => !v)}
-                  title="Sort by earliest booked food/accommodation date"
+                  onClick={cycleDateSort}
+                  title="Cycle: default -> each stay date, bringing that date's registrants to the top"
                   className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${
-                    dateSort
+                    dateSort !== 'default'
                       ? 'border-cyan-300 bg-cyan-400 text-black shadow-[0_0_18px_rgba(34,211,238,0.55)] ring-2 ring-cyan-300/70'
                       : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/25 hover:text-white/80'
                   }`}
                 >
                   <CalendarCheck2 size={13} />
-                  {dateSort ? 'Sort: By Date' : 'Sort: Default'}
+                  {dateSort === 'default'
+                    ? 'Sort: Default'
+                    : `Sort: Date ${STAY_DATES.findIndex((d) => d.id === dateSort) + 1} (${shortDay(dateSort)})`}
                 </button>
               </div>
 
@@ -1249,7 +1262,6 @@ function AdminDashboard({ session, onLogout }) {
                       onToggle={() => setExpanded(expanded === u.user_id ? null : u.user_id)}
                       onSaved={loadUsers}
                       pushToast={pushToast}
-                      teams={teamsByCode.get(u.unique_code)}
                     />
                   ))}
                   {filtered.length === 0 && (
@@ -1283,7 +1295,6 @@ function AdminDashboard({ session, onLogout }) {
                             onSaved={loadUsers}
                             pushToast={pushToast}
                             subtitle={row.itemTitle}
-                            teams={teamsByCode.get(row.user.unique_code)}
                           />
                         ))}
                       </div>
@@ -1551,7 +1562,7 @@ function CheckInResultModal({ result, onRescan, onClose }) {
   );
 }
 
-function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtitle, teams }) {
+function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtitle }) {
   const [form, setForm] = useState({
     accommodation_room: user.accommodation_room || '',
   });
@@ -1691,39 +1702,6 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
                 <p className="sm:col-span-2">
                   Merch selection: {user.merch_selection || '—'} <span className="text-white/30">(read-only, set by user)</span>
                 </p>
-                {Array.isArray(teams) && teams.length > 0 && (
-                  <div className="sm:col-span-2">
-                    <p className="mb-1">Team:</p>
-                    {teams.map((team) => {
-                      const eventItem = findCatalogItem(team.event_id);
-                      const codes = [
-                        team.leader_unique_code,
-                        ...(team.member_codes || []).filter((c) => c !== team.leader_unique_code),
-                      ].filter(Boolean);
-                      return (
-                        <div key={team.id} className="mb-1 flex flex-wrap items-center gap-1.5">
-                          <span className="text-white/40">{eventItem?.title || team.event_id}:</span>
-                          {codes.map((c) => (
-                            <span
-                              key={c}
-                              className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
-                                c === team.leader_unique_code
-                                  ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-300'
-                                  : 'border-white/15 bg-white/[0.03] text-white/60'
-                              }`}
-                            >
-                              {c}
-                              {c === team.leader_unique_code ? ' (leader)' : ''}
-                            </span>
-                          ))}
-                          <span className={`text-[10px] ${team.confirmed ? 'text-emerald-400' : 'text-amber-400'}`}>
-                            {team.confirmed ? 'confirmed' : 'pending'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
                 <p>Total paid: ₹{user.registration?.amount ?? 0}</p>
               </div>
 
@@ -1737,7 +1715,7 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
                       {user.registration.details.items_paid.map((item, i) => (
                         <p key={item.booking_uid || item.booking_id || i}>
                           {cleanItemTitle(item)} × {item.qty} — ₹{item.amount}
-                          {item.dates?.length ? ` · ${item.dates.join(', ')}` : ''}
+                          {item.dates?.length ? ` · ${item.dates.map(shortDay).join(', ')}` : ''}
                           {item.needs_day_selection ? (
                             <span className="ml-1 text-amber-300">(days unconfirmed)</span>
                           ) : null}
@@ -1750,7 +1728,7 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
               {eventEntries.length > 0 && (
                 <div className="mb-5">
                   <p className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-cyan-400/80">
-                    <Users size={12} /> Participants
+                    <Users size={12} /> Events / Teams
                   </p>
                   <div className="space-y-2">
                     {eventEntries.map((e) => (
@@ -2620,7 +2598,10 @@ function ParticipantsPanel({ eventId, title, groupSize, ownerCode, session, push
 
   return (
     <div className="rounded-lg border border-white/10 bg-black/20 p-2.5">
-      <p className="mb-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">{title}</p>
+      <p className="mb-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">
+        {title}
+        {groupSize > 1 ? <span className="text-cyan-400/70"> (team)</span> : null}
+      </p>
       <div className="flex flex-wrap gap-1.5">
         {codes.map(({ code, leader }) =>
           editingCode === code ? (
@@ -2658,7 +2639,7 @@ function ParticipantsPanel({ eventId, title, groupSize, ownerCode, session, push
               className="flex items-center gap-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 font-mono text-[10px] text-cyan-300"
             >
               {code}
-              {leader ? ' (paid)' : ''}
+              {leader ? ' (leader)' : ''}
               <button
                 type="button"
                 onClick={() => {

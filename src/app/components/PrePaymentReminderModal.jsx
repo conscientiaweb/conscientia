@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import useBodyScrollLock from "../hooks/useBodyScrollLock";
 
 export default function PrePaymentReminderModal({ open, missingMerch, missingAccommodation, missingFood, onContinue, onClose }) {
+  useBodyScrollLock(open);
   return (
     <AnimatePresence>
       {open && (
@@ -11,7 +13,7 @@ export default function PrePaymentReminderModal({ open, missingMerch, missingAcc
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm sm:p-6"
+          className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/75 p-4 pt-24 backdrop-blur-sm sm:p-6 sm:pt-24 lg:pt-28"
           onClick={onClose}
         >
           <motion.div

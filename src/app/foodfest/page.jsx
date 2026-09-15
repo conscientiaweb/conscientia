@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
 import { startFoodfestCheckout } from '@/lib/foodfestCheckout';
 import FetchIntro from '../components/FetchIntro';
+import useBodyScrollLock from '../hooks/useBodyScrollLock';
 
 const FLOATING_EMOJI = ['🍕', '🌮', '🍔', '🍟', '🍩', '🧋'];
 const ITEM_EMOJI = ['🍜', '🥘', '🍢', '🌯', '🧆', '🥟', '🍡', '🥪'];
@@ -36,6 +37,7 @@ export default function FoodfestPage() {
   const [myOrders, setMyOrders] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  useBodyScrollLock(cartOpen || showMenu);
 
   const { items, addItem, updateQty, removeItem } = useCart();
   const { user, loading: authLoading } = useAuth();
@@ -424,7 +426,7 @@ export default function FoodfestPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center"
+            className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-black/70 backdrop-blur-sm sm:items-start sm:pt-24 lg:pt-28"
             onClick={closeCart}
           >
             <motion.div
@@ -532,7 +534,7 @@ export default function FoodfestPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4"
+            className="fixed inset-0 z-[300] flex items-start justify-center overflow-y-auto bg-black/80 p-4 pt-24 sm:pt-24 lg:pt-28"
             onClick={() => setShowMenu(false)}
           >
             <motion.div

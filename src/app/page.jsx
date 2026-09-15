@@ -35,6 +35,7 @@ import FetchIntro from "./components/FetchIntro";
 import { getCatalog } from "@/lib/catalogStore";
 import { getPromo, DEFAULT_PROMO } from "@/lib/promoStore";
 import { groupBySection } from "./lib/groupBySection";
+import useBodyScrollLock from "./hooks/useBodyScrollLock";
 
 /** Memoized — Hyperspeed re-inits WebGL when this object identity changes (see reactbits.dev). */
 const HYPERSPEED_OPTIONS = {
@@ -96,6 +97,7 @@ export default function Home() {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [hoveredEventIndex, setHoveredEventIndex] = useState(null);
+  useBodyScrollLock(!!selectedEvent || !!selectedWorkshop);
 
   // Live from the database — the home page always mirrors whatever is
   // currently the *first* (featured) section for each kind.
@@ -581,7 +583,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-black/80"
+            className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-6 pt-24 backdrop-blur-md bg-black/80 sm:pt-24 lg:pt-28"
             onClick={() => setSelectedEvent(null)}
           >
             <motion.div
@@ -631,7 +633,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-black/80"
+            className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-6 pt-24 backdrop-blur-md bg-black/80 sm:pt-24 lg:pt-28"
             onClick={() => setSelectedWorkshop(null)}
           >
             <motion.div

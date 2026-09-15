@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import useProfile from "../hooks/useProfile";
+import useBodyScrollLock from "../hooks/useBodyScrollLock";
 
 export default function ProfileCompletionModal() {
   const { user } = useAuth();
@@ -30,6 +31,8 @@ export default function ProfileCompletionModal() {
       !profile.college_id ||
       !profile.aadhaar_number ||
       !profile.gender);
+
+  useBodyScrollLock(missing);
 
   useEffect(() => {
     if (profile) {
@@ -85,7 +88,7 @@ export default function ProfileCompletionModal() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm sm:p-6"
+          className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/75 p-4 pt-24 backdrop-blur-sm sm:p-6 sm:pt-24 lg:pt-28"
         >
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.97 }}

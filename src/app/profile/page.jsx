@@ -16,6 +16,7 @@ import { getCatalog } from '@/lib/catalogStore';
 import { supabase } from '@/lib/supabaseClient';
 import { FOOD_ADDONS } from '../accommodation/merchData';
 import MealDaySelectionModal from '../components/MealDaySelectionModal';
+import useBodyScrollLock from '../hooks/useBodyScrollLock';
 
 async function authedFetch(url, options = {}) {
   const { data } = await supabase.auth.getSession();
@@ -585,6 +586,7 @@ export default function ProfilePage() {
 }
 
 function QrCodeModal({ code, onClose }) {
+  useBodyScrollLock(true);
   const [dataUrl, setDataUrl] = useState('');
 
   useEffect(() => {
@@ -602,7 +604,7 @@ function QrCodeModal({ code, onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/80 p-6 pt-24 backdrop-blur-sm sm:pt-24 lg:pt-28"
       onClick={onClose}
     >
       <motion.div
@@ -640,12 +642,13 @@ function QrCodeModal({ code, onClose }) {
 }
 
 function ScanResultModal({ result, onRescan, onClose }) {
+  useBodyScrollLock(true);
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/80 p-6 pt-24 backdrop-blur-sm sm:pt-24 lg:pt-28"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 12 }}

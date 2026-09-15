@@ -12,6 +12,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CursorTrialWrapper from "./components/CursorTrialWrapper";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
+import GlobalMealDayModal from "./components/GlobalMealDayModal";
 import TeamNudgeWidget from "./components/TeamNudgeWidget";
 import NetworkStatusToast from "./components/NetworkStatusToast";
 import CartToast from "./components/CartToast";
@@ -112,6 +113,7 @@ export default function RootLayout({ children }) {
               <MusicProvider>
                 <CursorTrialWrapper />
                 <ProfileCompletionModal />
+                <GlobalMealDayModal />
                 <TeamNudgeWidget />
                 <NetworkStatusToast />
                 <CartToast />

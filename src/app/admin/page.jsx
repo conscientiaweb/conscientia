@@ -1492,7 +1492,7 @@ function CheckInResultModal({ result, onRescan, onClose }) {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#050b0f] p-6"
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#050b0f] p-6"
       >
         {result.loading && <p className="text-center text-sm text-white/50">Looking up attendee…</p>}
 

@@ -1475,7 +1475,7 @@ export default function WorkshopRegistration() {
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
-              className="w-full max-w-md rounded-3xl bg-[#0f0f10] border border-white/10 p-8"
+              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0f0f10] border border-white/10 p-8"
             >
               <h3 className="text-2xl font-black uppercase italic tracking-tighter">
                 Upgrade to Combo?

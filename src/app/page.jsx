@@ -588,7 +588,7 @@ export default function Home() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="relative bg-[#0F0F0F] border border-purple-500/50 p-8 md:p-12 rounded-[2.5rem] text-center max-w-md w-full shadow-[0_0_80px_rgba(168,85,247,0.15)]"
+              className="relative bg-[#0F0F0F] border border-purple-500/50 p-8 md:p-12 rounded-[2.5rem] text-center max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[0_0_80px_rgba(168,85,247,0.15)]"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -638,7 +638,7 @@ export default function Home() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="relative bg-[#0F0F0F] border border-cyan-500/50 p-8 md:p-12 rounded-[2.5rem] text-center max-w-md w-full shadow-[0_0_80px_rgba(6,182,212,0.15)]"
+              className="relative bg-[#0F0F0F] border border-cyan-500/50 p-8 md:p-12 rounded-[2.5rem] text-center max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[0_0_80px_rgba(6,182,212,0.15)]"
               onClick={(e) => e.stopPropagation()}
             >
               <button

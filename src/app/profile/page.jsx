@@ -611,7 +611,7 @@ function QrCodeModal({ code, onClose }) {
         exit={{ scale: 0.6, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 18 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-xs rounded-2xl border border-cyan-500/30 bg-[#050b0f] p-6 text-center"
+        className="relative w-full max-w-xs max-h-[90vh] overflow-y-auto rounded-2xl border border-cyan-500/30 bg-[#050b0f] p-6 text-center"
       >
         <button
           onClick={onClose}
@@ -652,7 +652,7 @@ function ScanResultModal({ result, onRescan, onClose }) {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#050b0f] p-6"
+        className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#050b0f] p-6"
       >
         {result.loading && <p className="text-center text-sm text-white/50">Looking up attendee…</p>}
 

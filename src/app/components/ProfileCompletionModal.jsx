@@ -92,7 +92,7 @@ export default function ProfileCompletionModal() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0c10] p-5 sm:p-7"
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0a0c10] p-5 sm:p-7"
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-cyan-400/90 mb-2">
               One Last Step

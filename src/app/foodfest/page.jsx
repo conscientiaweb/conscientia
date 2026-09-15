@@ -432,7 +432,7 @@ export default function FoodfestPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-t-2xl border border-orange-500/20 bg-[#0a0604] p-5 sm:rounded-2xl"
+              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl border border-orange-500/20 bg-[#0a0604] p-5 sm:rounded-2xl"
             >
               {!confirming ? (
                 <>

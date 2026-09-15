@@ -143,6 +143,19 @@ function hasFood(user) {
   return paidIds(user).some((id) => FOOD_ADDON_IDS.has(String(id)));
 }
 
+// Earliest stay date across a user's paid food/accommodation items (ids are
+// ISO dates, e.g. "2026-10-29", so plain string sort is chronological). Items
+// still needing day selection have no dates yet and sort last.
+function earliestStayDate(user) {
+  const items = user.registration?.details?.items_paid;
+  if (!Array.isArray(items)) return null;
+  const dates = items
+    .filter((i) => FOOD_ADDON_IDS.has(i.internal_id) || i.internal_id === 'accommodation')
+    .flatMap((i) => (Array.isArray(i.dates) ? i.dates : []));
+  if (dates.length === 0) return null;
+  return dates.slice().sort()[0];
+}
+
 function foodBreakdown(users) {
   const counts = { breakfast: 0, lunch: 0, dinner: 0 };
   for (const u of users) {
@@ -396,10 +409,13 @@ function AdminDashboard({ session, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [eventSearch, setEventSearch] = useState('');
+  const [allTeams, setAllTeams] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [tab, setTab] = useState('registrants'); // 'registrants' | 'logs' | 'admins'
   const [activeFilters, setActiveFilters] = useState([]); // ['event','workshop','food','accommodation']
   const [foodSort, setFoodSort] = useState(false);
+  const [dateSort, setDateSort] = useState(false);
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
@@ -619,8 +635,9 @@ function AdminDashboard({ session, onLogout }) {
     setLoading(true);
     setError('');
     try {
-      const [res] = await Promise.all([
+      const [res, teamsRes] = await Promise.all([
         fetch('/api/admin/users', { headers: adminHeaders(session) }),
+        fetch('/api/admin/team', { headers: adminHeaders(session) }),
         loadCatalogSets(),
       ]);
       const data = await res.json().catch(() => ({}));
@@ -629,6 +646,8 @@ function AdminDashboard({ session, onLogout }) {
         return;
       }
       setUsers(data.data || []);
+      const teamsData = await teamsRes.json().catch(() => ({}));
+      if (teamsRes.ok && teamsData.success) setAllTeams(teamsData.data || []);
     } finally {
       setLoading(false);
     }
@@ -672,12 +691,34 @@ function AdminDashboard({ session, onLogout }) {
     setActiveFilters((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
   };
 
+  // Maps a registrant's unique_code to every team they're on, across all
+  // events — a solo (non-team) registrant simply has no entry here.
+  const teamsByCode = useMemo(() => {
+    const map = new Map();
+    for (const team of allTeams) {
+      const codes = [team.leader_unique_code, ...(team.member_codes || [])].filter(Boolean);
+      for (const code of codes) {
+        if (!map.has(code)) map.set(code, []);
+        map.get(code).push(team);
+      }
+    }
+    return map;
+  }, [allTeams]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = users;
     if (q) {
       list = list.filter((u) =>
         [u.name, u.unique_code, u.phone, u.email].some((v) => (v || '').toLowerCase().includes(q))
+      );
+    }
+    const eq = eventSearch.trim().toLowerCase();
+    if (eq) {
+      list = list.filter((u) =>
+        paidIds(u)
+          .map(String)
+          .some((id) => (findCatalogItem(id)?.title || '').toLowerCase().includes(eq))
       );
     }
     if (activeFilters.length > 0) {
@@ -699,8 +740,21 @@ function AdminDashboard({ session, onLogout }) {
         })
         .map(({ u }) => u);
     }
+    if (dateSort) {
+      list = list
+        .map((u, i) => ({ u, i }))
+        .sort((a, b) => {
+          const ad = earliestStayDate(a.u);
+          const bd = earliestStayDate(b.u);
+          if (ad && bd) return ad === bd ? a.i - b.i : ad < bd ? -1 : 1;
+          if (ad && !bd) return -1;
+          if (!ad && bd) return 1;
+          return a.i - b.i;
+        })
+        .map(({ u }) => u);
+    }
     return list;
-  }, [users, search, activeFilters, foodSort]);
+  }, [users, search, eventSearch, activeFilters, foodSort, dateSort]);
 
   const filterCounts = useMemo(() => {
     const counts = {};
@@ -1109,6 +1163,16 @@ function AdminDashboard({ session, onLogout }) {
                     className="w-full rounded-lg border border-white/15 bg-black/40 py-2.5 pl-9 pr-4 text-sm outline-none transition-colors focus:border-cyan-500/60"
                   />
                 </div>
+                <div className="relative max-w-md flex-1 min-w-[220px]">
+                  <ListChecks size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                  <input
+                    type="text"
+                    value={eventSearch}
+                    onChange={(e) => setEventSearch(e.target.value)}
+                    placeholder="Search by event or workshop…"
+                    className="w-full rounded-lg border border-white/15 bg-black/40 py-2.5 pl-9 pr-4 text-sm outline-none transition-colors focus:border-cyan-500/60"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => setFoodSort((v) => !v)}
@@ -1120,6 +1184,19 @@ function AdminDashboard({ session, onLogout }) {
                 >
                   <ArrowUpDown size={13} />
                   {foodSort ? 'Sort: Food First' : 'Sort: Default'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDateSort((v) => !v)}
+                  title="Sort by earliest booked food/accommodation date"
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${
+                    dateSort
+                      ? 'border-cyan-300 bg-cyan-400 text-black shadow-[0_0_18px_rgba(34,211,238,0.55)] ring-2 ring-cyan-300/70'
+                      : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/25 hover:text-white/80'
+                  }`}
+                >
+                  <CalendarCheck2 size={13} />
+                  {dateSort ? 'Sort: By Date' : 'Sort: Default'}
                 </button>
               </div>
 
@@ -1171,6 +1248,7 @@ function AdminDashboard({ session, onLogout }) {
                       onToggle={() => setExpanded(expanded === u.user_id ? null : u.user_id)}
                       onSaved={loadUsers}
                       pushToast={pushToast}
+                      teams={teamsByCode.get(u.unique_code)}
                     />
                   ))}
                   {filtered.length === 0 && (
@@ -1204,6 +1282,7 @@ function AdminDashboard({ session, onLogout }) {
                             onSaved={loadUsers}
                             pushToast={pushToast}
                             subtitle={row.itemTitle}
+                            teams={teamsByCode.get(row.user.unique_code)}
                           />
                         ))}
                       </div>
@@ -1470,7 +1549,7 @@ function CheckInResultModal({ result, onRescan, onClose }) {
   );
 }
 
-function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtitle }) {
+function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtitle, teams }) {
   const [form, setForm] = useState({
     accommodation_room: user.accommodation_room || '',
   });
@@ -1610,6 +1689,39 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
                 <p className="sm:col-span-2">
                   Merch selection: {user.merch_selection || '—'} <span className="text-white/30">(read-only, set by user)</span>
                 </p>
+                {Array.isArray(teams) && teams.length > 0 && (
+                  <div className="sm:col-span-2">
+                    <p className="mb-1">Team:</p>
+                    {teams.map((team) => {
+                      const eventItem = findCatalogItem(team.event_id);
+                      const codes = [
+                        team.leader_unique_code,
+                        ...(team.member_codes || []).filter((c) => c !== team.leader_unique_code),
+                      ].filter(Boolean);
+                      return (
+                        <div key={team.id} className="mb-1 flex flex-wrap items-center gap-1.5">
+                          <span className="text-white/40">{eventItem?.title || team.event_id}:</span>
+                          {codes.map((c) => (
+                            <span
+                              key={c}
+                              className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
+                                c === team.leader_unique_code
+                                  ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-300'
+                                  : 'border-white/15 bg-white/[0.03] text-white/60'
+                              }`}
+                            >
+                              {c}
+                              {c === team.leader_unique_code ? ' (leader)' : ''}
+                            </span>
+                          ))}
+                          <span className={`text-[10px] ${team.confirmed ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {team.confirmed ? 'confirmed' : 'pending'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <p>Total paid: ₹{user.registration?.amount ?? 0}</p>
               </div>
 

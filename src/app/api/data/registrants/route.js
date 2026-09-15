@@ -77,7 +77,6 @@ export async function GET(req) {
         email: reg.email,
         payment_status: reg.payment_status,
         status: reg.status,
-        amount: reg.amount,
         registered_at: reg.created_at,
       };
     });

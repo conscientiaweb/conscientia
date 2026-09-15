@@ -1,19 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Users, CheckCircle2 } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import LoadingState from "../components/LoadingState";
-
-function paymentTone(status) {
-  const s = (status || "").toLowerCase();
-  if (s === "paid" || s === "success") return { bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.4)", text: "#34d399" };
-  if (s === "pending") return { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.4)", text: "#fbbf24" };
-  if (s === "failed") return { bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.4)", text: "#f87171" };
-  return { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.5)" };
-}
 
 function initials(name) {
   if (!name) return "?";
@@ -34,6 +26,7 @@ export default function DataPage() {
   const [teams, setTeams] = useState([]);
   const [participantsError, setParticipantsError] = useState("");
   const [search, setSearch] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
 
   async function authedFetch(url) {
     const { data } = await supabase.auth.getSession();
@@ -92,10 +85,38 @@ export default function DataPage() {
     );
   }, [participants, search]);
 
-  const paidCount = useMemo(
-    () => (participants || []).filter((p) => (p.payment_status || "").toLowerCase() === "paid").length,
-    [participants]
-  );
+  const filteredAssigned = useMemo(() => {
+    if (!assigned) return [];
+    const q = itemSearch.trim().toLowerCase();
+    if (!q) return assigned;
+    return assigned.filter((item) => (item.title || item.id || "").toLowerCase().includes(q));
+  }, [assigned, itemSearch]);
+
+  // Groups the (already search-filtered) participant list by team roster —
+  // each team's members shown together in registration order, leader first —
+  // with everyone not on a team collected into a trailing "Individual" group.
+  const groupedParticipants = useMemo(() => {
+    if (!teams || teams.length === 0) {
+      return filteredParticipants.length ? [{ label: null, rows: filteredParticipants }] : [];
+    }
+    const byCode = new Map(filteredParticipants.map((p) => [p.unique_code, p]));
+    const used = new Set();
+    const groups = [];
+    for (const team of teams) {
+      const codes = [
+        team.leader_unique_code,
+        ...(team.member_codes || []).filter((c) => c !== team.leader_unique_code),
+      ].filter(Boolean);
+      const rows = codes.map((c) => byCode.get(c)).filter(Boolean);
+      codes.forEach((c) => used.add(c));
+      if (rows.length > 0) {
+        groups.push({ label: `Team — ${team.confirmed ? "Confirmed" : "Pending"}`, rows });
+      }
+    }
+    const individual = filteredParticipants.filter((p) => !used.has(p.unique_code));
+    if (individual.length > 0) groups.push({ label: groups.length ? "Individual" : null, rows: individual });
+    return groups;
+  }, [filteredParticipants, teams]);
 
   return (
     <div
@@ -156,7 +177,31 @@ export default function DataPage() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "2rem" }} className="max-lg:grid-cols-1">
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              {assigned.map((item) => (
+              <div style={{ position: "relative", marginBottom: "0.4rem" }}>
+                <Search size={13} style={{ position: "absolute", left: "0.8rem", top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.35)" }} />
+                <input
+                  type="text"
+                  value={itemSearch}
+                  onChange={(e) => setItemSearch(e.target.value)}
+                  placeholder="Search event or workshop…"
+                  style={{
+                    width: "100%",
+                    padding: "0.55rem 0.8rem 0.55rem 2.1rem",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    background: "rgba(255,255,255,0.03)",
+                    color: "white",
+                    fontSize: "0.78rem",
+                    outline: "none",
+                  }}
+                />
+              </div>
+              {filteredAssigned.length === 0 && (
+                <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", padding: "0.4rem 0.2rem" }}>
+                  No workshop/event matches your search.
+                </p>
+              )}
+              {filteredAssigned.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => openItem(item)}
@@ -215,15 +260,6 @@ export default function DataPage() {
                         <p style={{ fontSize: "1.1rem", fontWeight: 800, lineHeight: 1 }}>{participants.length}</p>
                         <p style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                           Registered
-                        </p>
-                      </div>
-                    </div>
-                    <div className="glass-card" style={{ padding: "0.8rem 1.2rem", borderRadius: "14px", display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                      <CheckCircle2 size={16} color="#34d399" />
-                      <div>
-                        <p style={{ fontSize: "1.1rem", fontWeight: 800, lineHeight: 1 }}>{paidCount}</p>
-                        <p style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                          Paid
                         </p>
                       </div>
                     </div>
@@ -292,7 +328,7 @@ export default function DataPage() {
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                         <thead>
                           <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", textAlign: "left", background: "rgba(255,255,255,0.02)" }}>
-                            {["", "Name", "CNS-id", "Email", "Phone", "College", "City", "Amount", "Payment"].map((h) => (
+                            {["", "Name", "CNS-id", "Email", "Phone", "College", "City"].map((h) => (
                               <th
                                 key={h}
                                 style={{
@@ -310,64 +346,64 @@ export default function DataPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredParticipants.map((p, i) => {
-                            const tone = paymentTone(p.payment_status);
-                            return (
-                              <tr
-                                key={i}
-                                style={{
-                                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                                  background: i % 2 === 1 ? "rgba(255,255,255,0.015)" : "transparent",
-                                }}
-                              >
-                                <td style={{ padding: "0.55rem 0.8rem" }}>
-                                  <div
+                          {groupedParticipants.map((group, gi) => (
+                            <React.Fragment key={gi}>
+                              {group.label && (
+                                <tr>
+                                  <td
+                                    colSpan={7}
                                     style={{
-                                      width: "26px",
-                                      height: "26px",
-                                      borderRadius: "50%",
-                                      background: "linear-gradient(135deg, rgba(51,214,255,0.3), rgba(168,85,247,0.3))",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontSize: "0.6rem",
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    {initials(p.name)}
-                                  </div>
-                                </td>
-                                <td style={{ padding: "0.55rem 0.8rem", fontWeight: 600 }}>{p.name || "—"}</td>
-                                <td style={{ padding: "0.55rem 0.8rem", fontFamily: "monospace", color: "#33d6ff" }}>{p.unique_code || "—"}</td>
-                                <td style={{ padding: "0.55rem 0.8rem" }}>{p.email || "—"}</td>
-                                <td style={{ padding: "0.55rem 0.8rem" }}>{p.phone || "—"}</td>
-                                <td style={{ padding: "0.55rem 0.8rem" }}>{p.college || "—"}</td>
-                                <td style={{ padding: "0.55rem 0.8rem" }}>{p.city || "—"}</td>
-                                <td style={{ padding: "0.55rem 0.8rem" }}>{p.amount ? `₹${p.amount}` : "—"}</td>
-                                <td style={{ padding: "0.55rem 0.8rem" }}>
-                                  <span
-                                    style={{
-                                      display: "inline-block",
-                                      padding: "0.2rem 0.6rem",
-                                      borderRadius: "999px",
+                                      padding: "0.5rem 0.8rem",
                                       fontSize: "0.65rem",
-                                      fontWeight: 700,
                                       textTransform: "uppercase",
-                                      letterSpacing: "0.05em",
-                                      background: tone.bg,
-                                      border: `1px solid ${tone.border}`,
-                                      color: tone.text,
+                                      letterSpacing: "0.1em",
+                                      fontWeight: 700,
+                                      color: "rgba(51,214,255,0.8)",
+                                      background: "rgba(51,214,255,0.05)",
                                     }}
                                   >
-                                    {p.payment_status || "—"}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                                    {group.label}
+                                  </td>
+                                </tr>
+                              )}
+                              {group.rows.map((p, i) => (
+                                <tr
+                                  key={p.unique_code || `${gi}-${i}`}
+                                  style={{
+                                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                                    background: i % 2 === 1 ? "rgba(255,255,255,0.015)" : "transparent",
+                                  }}
+                                >
+                                  <td style={{ padding: "0.55rem 0.8rem" }}>
+                                    <div
+                                      style={{
+                                        width: "26px",
+                                        height: "26px",
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(135deg, rgba(51,214,255,0.3), rgba(168,85,247,0.3))",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "0.6rem",
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {initials(p.name)}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: "0.55rem 0.8rem", fontWeight: 600 }}>{p.name || "—"}</td>
+                                  <td style={{ padding: "0.55rem 0.8rem", fontFamily: "monospace", color: "#33d6ff" }}>{p.unique_code || "—"}</td>
+                                  <td style={{ padding: "0.55rem 0.8rem" }}>{p.email || "—"}</td>
+                                  <td style={{ padding: "0.55rem 0.8rem" }}>{p.phone || "—"}</td>
+                                  <td style={{ padding: "0.55rem 0.8rem" }}>{p.college || "—"}</td>
+                                  <td style={{ padding: "0.55rem 0.8rem" }}>{p.city || "—"}</td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          ))}
                           {filteredParticipants.length === 0 && (
                             <tr>
-                              <td colSpan={9} style={{ padding: "1.5rem", color: "rgba(255,255,255,0.4)", textAlign: "center" }}>
+                              <td colSpan={7} style={{ padding: "1.5rem", color: "rgba(255,255,255,0.4)", textAlign: "center" }}>
                                 {participants.length === 0 ? "No one has registered yet." : "No participants match your search."}
                               </td>
                             </tr>

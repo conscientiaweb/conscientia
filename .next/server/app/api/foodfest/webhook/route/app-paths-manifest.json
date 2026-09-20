@@ -1,0 +1,3 @@
+{
+  "/api/foodfest/webhook/route": "app/api/foodfest/webhook/route.js"
+}

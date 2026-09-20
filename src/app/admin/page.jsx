@@ -24,6 +24,7 @@ import {
   Layers,
   Pencil,
   QrCode,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { getPromos, DEFAULT_PROMOS } from '@/lib/promoStore';
 import { groupBySection } from '../lib/groupBySection';
@@ -32,6 +33,7 @@ import QrScanner from '../components/QrScanner';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { downloadAsExcel } from '@/lib/exportExcel';
 
 const ADMIN_HEADER = 'x-admin-callsign';
 
@@ -80,12 +82,38 @@ const FOOD_LABELS = Object.fromEntries(FOOD_ADDONS.map((f) => [f.id, f.label]));
 // Splits a user's paid ids into separate workshop/event/food buckets with
 // readable titles, for showing as distinct fields instead of one lumped
 // "Tickets:" string.
+// Ids that are known-and-intentionally excluded from the Workshops/Events
+// buckets (they're surfaced elsewhere — food row, accommodation status,
+// merch_selection, or aren't real catalog products at all).
+const NON_CATALOG_PAID_IDS = new Set(['accommodation', 'delivery']);
+function isKnownNonCatalogId(id) {
+  return (
+    NON_CATALOG_PAID_IDS.has(id) ||
+    FOOD_ADDON_IDS.has(id) ||
+    id.startsWith('merch-') ||
+    id.startsWith('legacy_')
+  );
+}
+
+// Any paid id has to fall in the workshop/event catalog, a known non-catalog
+// bucket (food/accommodation/merch/legacy), or it's an orphan — a real
+// payment whose catalog_items row got deleted/renamed after people already
+// paid for it (e.g. 'mun_pc'). Silently dropping those would hide real paid
+// bookings from admins reconciling payments, so they're surfaced in their
+// own bucket instead, titled from the detailed paid-items list when possible.
 function paidBuckets(user) {
   const ids = paidIds(user).map(String);
   const workshops = ids.filter((id) => WORKSHOP_IDS.has(id)).map((id) => findCatalogItem(id)?.title || id);
   const events = ids.filter((id) => EVENT_IDS.has(id)).map((id) => findCatalogItem(id)?.title || id);
   const food = ids.filter((id) => FOOD_ADDON_IDS.has(id)).map((id) => FOOD_LABELS[id] || id);
-  return { workshops, events, food };
+  const itemsPaid = Array.isArray(user.registration?.details?.items_paid) ? user.registration.details.items_paid : [];
+  const other = ids
+    .filter((id) => !WORKSHOP_IDS.has(id) && !EVENT_IDS.has(id) && !isKnownNonCatalogId(id))
+    .map((id) => {
+      const paidItem = itemsPaid.find((it) => it.internal_id === id);
+      return paidItem ? `${cleanItemTitle(paidItem)} (${id})` : id;
+    });
+  return { workshops, events, food, other };
 }
 
 const STAY_DATE_LABELS = Object.fromEntries(STAY_DATES.map((d) => [d.id, d.label]));
@@ -785,6 +813,34 @@ function AdminDashboard({ session, onLogout }) {
     };
   }, [users]);
 
+  const exportRegistrants = () => {
+    // groupMode's "grouped" is filtered's rows re-sliced into one row per
+    // (user, item) pair — export whichever the admin is currently looking
+    // at, so the file matches what's on screen after search + filters.
+    const sourceUsers = groupMode && grouped ? grouped.flatMap((g) => g.cards.map((c) => c.user)) : filtered;
+    const rows = sourceUsers.map((u) => {
+      const buckets = paidBuckets(u);
+      return {
+        Name: u.name || '',
+        'CNS-id': u.unique_code || '',
+        Email: u.email || '',
+        Phone: u.phone || '',
+        'Aadhaar Number': u.aadhaar_number || '',
+        College: u.college || '',
+        City: u.city || '',
+        Gender: u.gender || '',
+        'Payment Status': u.registration?.payment_status || '',
+        'Amount Paid': u.registration?.amount ?? 0,
+        Workshops: buckets.workshops.join('; '),
+        Events: buckets.events.join('; '),
+        Food: buckets.food.join('; '),
+        'Other Paid (no catalog match)': buckets.other.join('; '),
+        Accommodation: accommodationStatus(u).label,
+      };
+    });
+    downloadAsExcel(rows, 'registrants.xlsx', 'Registrants');
+  };
+
   const eventFilterActive = activeFilters.includes('event');
   const workshopFilterActive = activeFilters.includes('workshop');
   const groupMode = eventFilterActive || workshopFilterActive;
@@ -1211,6 +1267,15 @@ function AdminDashboard({ session, onLogout }) {
                   {dateSort === 'default'
                     ? 'Sort: Default'
                     : `Sort: Date ${STAY_DATES.findIndex((d) => d.id === dateSort) + 1} (${shortDay(dateSort)})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={exportRegistrants}
+                  title="Download the currently searched/filtered registrants as an Excel file"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300 transition-colors hover:border-cyan-300 hover:bg-cyan-400/20"
+                >
+                  <FileSpreadsheet size={13} />
+                  Download as Excel
                 </button>
               </div>
 
@@ -1675,6 +1740,7 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
                 <p>College: {user.college || '—'}</p>
                 <p>City: {user.city || '—'}</p>
                 <p>Gender: {user.gender || '—'}</p>
+                <p>Aadhaar: {user.aadhaar_number || '—'}</p>
                 <p>Payment status: {user.registration?.payment_status || '—'}</p>
                 <p>
                   Accommodation:{' '}
@@ -1699,6 +1765,11 @@ function UserRow({ user, session, expanded, onToggle, onSaved, pushToast, subtit
                 <p className="sm:col-span-2">
                   Food: {buckets.food.join(', ') || '—'}
                 </p>
+                {buckets.other.length > 0 && (
+                  <p className="sm:col-span-2 text-amber-300">
+                    Other paid (no catalog match): {buckets.other.join(', ')}
+                  </p>
+                )}
                 <p className="sm:col-span-2">
                   Merch selection: {user.merch_selection || '—'} <span className="text-white/30">(read-only, set by user)</span>
                 </p>

@@ -1,0 +1,3 @@
+{
+  "/api/tiqr/webhook/route": "app/api/tiqr/webhook/route.js"
+}

@@ -79,6 +79,11 @@ const rubikMonoOne = Rubik_Mono_One({
   display: "swap",
 });
 
+export const metadata = {
+  title: "Conscientia 2026",
+  description: "Conscientia 2026",
+}
+
 export const viewport = {
   width: 'device-width',
   initialScale: 1,

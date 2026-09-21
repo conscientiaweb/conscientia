@@ -81,9 +81,9 @@ export async function PATCH(req) {
       .maybeSingle();
     const groupSize = catalogItem?.group_size || 1;
 
-    if (memberCodes.length !== groupSize) {
+    if (memberCodes.length < 1 || memberCodes.length > groupSize) {
       return NextResponse.json(
-        { success: false, message: `This event needs exactly ${groupSize} participants — you supplied ${memberCodes.length}.` },
+        { success: false, message: `This event allows at most ${groupSize} participants — you supplied ${memberCodes.length}.` },
         { status: 400 }
       );
     }

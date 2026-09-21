@@ -38,7 +38,7 @@ export async function GET(req) {
 
     const { data: item } = await supabase
       .from('catalog_items')
-      .select('id, kind, title, access')
+      .select('id, kind, title, access, group_size')
       .eq('id', itemId)
       .maybeSingle();
 
@@ -90,7 +90,7 @@ export async function GET(req) {
 
     return NextResponse.json({
       success: true,
-      data: { item: { id: item.id, kind: item.kind, title: item.title }, participants, teams: teams || [] },
+      data: { item: { id: item.id, kind: item.kind, title: item.title, group_size: item.group_size || 1 }, participants, teams: teams || [] },
     });
   } catch (err) {
     console.error('[data/registrants GET]', err);

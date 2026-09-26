@@ -126,6 +126,8 @@ export default function DataPage() {
       "Aadhaar Number": p.aadhaar_number || "",
       College: p.college || "",
       City: p.city || "",
+      Food: p.food || "",
+      "Accommodation Dates": p.accommodation || "",
     }));
     const label = (selected?.title || selected?.id || "registrants").replace(/[^a-z0-9]+/gi, "_");
     downloadAsExcel(rows, `${label}.xlsx`, "Registrants");
@@ -460,6 +462,8 @@ export default function DataPage() {
                                     <DetailField label="Aadhaar" value={p.aadhaar_number} mono />
                                     <DetailField label="College" value={p.college} />
                                     <DetailField label="City" value={p.city} />
+                                    <DetailField label="Food" value={p.food} />
+                                    <DetailField label="Accommodation" value={p.accommodation} />
                                   </div>
                                 )}
                               </div>

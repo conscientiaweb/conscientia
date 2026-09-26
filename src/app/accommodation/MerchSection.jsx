@@ -9,7 +9,7 @@ import { Check, ShoppingCart, Minus, Plus, Truck, Ruler, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import useProfile from '../hooks/useProfile';
-import { MERCH_ITEMS, ticketFor } from './merchData';
+import { MERCH_ITEMS, MERCH_REVEAL_VIDEO, ticketFor } from './merchData';
 import { getCostMap } from '@/lib/ticketStore';
 import { showCartToast } from '@/lib/cartToast';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
@@ -398,10 +398,25 @@ export default function MerchSection() {
         Gear up for Time Fall
       </h2>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
+      <div className="mx-auto grid max-w-sm grid-cols-1 gap-6">
         {MERCH_ITEMS.map((item) => (
           <MerchCard key={item.id} item={item} price={prices[item.id] || 0} onSelect={handleSelect} />
         ))}
+      </div>
+
+      <div className="mx-auto mt-8 max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+        <video
+          ref={(el) => {
+            if (el) el.volume = 0.5;
+          }}
+          src={MERCH_REVEAL_VIDEO}
+          autoPlay
+          loop
+          muted
+          playsInline
+          controls
+          className="h-auto w-full"
+        />
       </div>
 
       {activeItem && (

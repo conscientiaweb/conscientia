@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '../../_supabase-server';
+import { labelWithDates, paidItemDates } from '@/lib/paidItemDates';
 
 /**
  * Participant list for one workshop/event, restricted to callers whose own
@@ -64,9 +65,22 @@ export async function GET(req) {
       : { data: [] };
     const profileByUserId = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
 
+    const FOOD_IDS = [['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner']];
+
     const participants = (registrations || []).map((reg) => {
       const p = profileByUserId[reg.user_id];
+      const itemsPaid = Array.isArray(reg.details?.items_paid) ? reg.details.items_paid : [];
+      const ids = Array.isArray(reg.workshop_ids) ? reg.workshop_ids.map(String) : [];
+      const stay = paidItemDates(itemsPaid, 'accommodation');
       return {
+        food: FOOD_IDS.filter(([id]) => ids.includes(id))
+          .map(([id, label]) => labelWithDates(label, itemsPaid, id))
+          .join('; '),
+        accommodation: ids.includes('accommodation')
+          ? stay.dates.length
+            ? stay.dates.join(', ')
+            : 'date not chosen'
+          : '',
         name: p?.name || null,
         phone: p?.phone || null,
         college: p?.college || null,

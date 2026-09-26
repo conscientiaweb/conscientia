@@ -69,11 +69,12 @@ export async function removeEventFromUserRegistration(supabase, userId, eventId)
     .eq('email', rowEmail);
 }
 
-/** Looks up a batch of CNS-ids and resolves them to { user_id, unique_code}
- * rows, for validating a team roster before writing it. */
+/** Looks up a batch of CNS-ids and resolves them to { user_id, unique_code,
+ * name } rows, for validating a team roster before writing it (and for
+ * displaying teammate names alongside their codes in the admin UI). */
 export async function resolveMemberProfiles(supabase, codes) {
   if (codes.length === 0) return { profiles: [], missing: [] };
-  const { data } = await supabase.from('profiles').select('user_id, unique_code').in('unique_code', codes);
+  const { data } = await supabase.from('profiles').select('user_id, unique_code, name').in('unique_code', codes);
   const found = new Set((data || []).map((p) => p.unique_code));
   return { profiles: data || [], missing: codes.filter((c) => !found.has(c)) };
 }

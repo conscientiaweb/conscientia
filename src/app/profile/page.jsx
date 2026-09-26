@@ -579,6 +579,7 @@ export default function ProfilePage() {
 
       {showMealDayModal && pendingDaySelections.length > 0 && (
         <MealDaySelectionModal
+          userId={user.id}
           email={user.email}
           items={pendingDaySelections}
           onDone={async () => {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '../_supabase-server';
 import { addEventToUserRegistration, resolveMemberProfiles } from '@/lib/eventTeams';
+import { findRegistrationForUser } from '@/lib/registrationLookup';
 
 /**
  * User-facing team management for group-size events. The caller is always
@@ -68,11 +69,7 @@ export async function GET(req) {
     if (team) {
       role = team.leader_user_id === caller.id ? 'leader' : 'member';
     } else {
-      const { data: myRegistration } = await supabase
-        .from('registrations')
-        .select('workshop_ids')
-        .eq('user_id', caller.id)
-        .maybeSingle();
+      const myRegistration = await findRegistrationForUser(supabase, caller.id, caller.email, 'workshop_ids');
       const myIds = Array.isArray(myRegistration?.workshop_ids) ? myRegistration.workshop_ids : [];
       if (myIds.includes(eventId)) role = 'leader';
     }
@@ -126,11 +123,7 @@ export async function POST(req) {
     }
 
     // Must actually be registered (paid) for this event to be its leader.
-    const { data: myRegistration } = await supabase
-      .from('registrations')
-      .select('workshop_ids')
-      .eq('user_id', caller.id)
-      .maybeSingle();
+    const myRegistration = await findRegistrationForUser(supabase, caller.id, caller.email, 'workshop_ids');
     const myIds = Array.isArray(myRegistration?.workshop_ids) ? myRegistration.workshop_ids : [];
     if (!myIds.includes(eventId)) {
       return NextResponse.json(

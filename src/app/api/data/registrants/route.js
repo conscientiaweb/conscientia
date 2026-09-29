@@ -72,6 +72,7 @@ export async function GET(req) {
       const itemsPaid = Array.isArray(reg.details?.items_paid) ? reg.details.items_paid : [];
       const ids = Array.isArray(reg.workshop_ids) ? reg.workshop_ids.map(String) : [];
       const stay = paidItemDates(itemsPaid, 'accommodation');
+      const details = reg.details && typeof reg.details === 'object' ? reg.details : {};
       return {
         food: FOOD_IDS.filter(([id]) => ids.includes(id))
           .map(([id, label]) => labelWithDates(label, itemsPaid, id))
@@ -81,14 +82,16 @@ export async function GET(req) {
             ? stay.dates.join(', ')
             : 'date not chosen'
           : '',
-        name: p?.name || null,
-        phone: p?.phone || null,
-        college: p?.college || null,
-        city: p?.city || null,
+        // Guest checkouts (no user_id, so no `profiles` row) still have
+        // name/phone/college/city recorded from the payment itself.
+        name: p?.name || details.name || null,
+        phone: p?.phone || details.phone || null,
+        college: p?.college || details.college || null,
+        city: p?.city || details.city || null,
         address: p?.address || null,
         gender: p?.gender || null,
         aadhaar_number: p?.aadhaar_number || null,
-        unique_code: p?.unique_code || null,
+        unique_code: p?.unique_code || details.unique_code || null,
         email: reg.email,
         payment_status: reg.payment_status,
         status: reg.status,
